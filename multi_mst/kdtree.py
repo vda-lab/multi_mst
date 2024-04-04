@@ -1,11 +1,12 @@
 import numba
 import numpy as np
-
 from collections import namedtuple
 
 NumbaKDTree = namedtuple("KDTree", ["data", "idx_array", "node_data", "node_bounds"])
 
+
 def kdtree_to_numba(sklearn_kdtree):
+    """Convert a scikit-learn KDTree object to a NumbaKDTree object."""
     data, idx_array, node_data, node_bounds = sklearn_kdtree.get_arrays()
     return NumbaKDTree(data, idx_array, node_data, node_bounds)
 
@@ -23,6 +24,7 @@ def kdtree_to_numba(sklearn_kdtree):
     },
 )
 def rdist(x, y):
+    """Computes the squared Euclidean distance between two points."""
     result = 0.0
     dim = x.shape[0]
     for i in range(dim):
@@ -34,32 +36,8 @@ def rdist(x, y):
 
 @numba.njit(
     [
-        "f4(f4[::1],f4[::1],f4[::1])",
-        "f4(f8[::1],f8[::1],f4[::1])",
-        "f4(f8[::1],f8[::1],f8[::1])",
-    ],
-    fastmath=True,
-    locals={
-        "dim": numba.types.intp,
-        "i": numba.types.uint16,
-    },
-)
-def point_to_node_lower_bound_rdist(upper, lower, pt):
-    result = 0.0
-    dim = pt.shape[0]
-    for i in range(dim):
-        d_lo = upper[i] - pt[i] if upper[i] > pt[i] else 0.0
-        d_hi = pt[i] - lower[i] if pt[i] > lower[i] else 0.0
-        d = d_lo + d_hi
-        result += d * d
-
-    return result
-
-
-@numba.njit(
-    [
-        "i4(f4[::1],i4[::1],f4,i4)",
-        "i4(f8[::1],i4[::1],f8,i4)",
+        "void(f4[::1],i4[::1],f4,i4)",
+        "void(f8[::1],i4[::1],f8,i4)",
     ],
     fastmath=True,
     locals={
@@ -71,8 +49,9 @@ def point_to_node_lower_bound_rdist(upper, lower, pt):
     },
 )
 def simple_heap_push(priorities, indices, p, n):
-    if p >= priorities[0]:
-        return 0
+    """Inserts value (index) in to priority heap (distance)."""
+    # if p >= priorities[0]:
+    # return 0
 
     size = priorities.shape[0]
 
@@ -112,11 +91,12 @@ def simple_heap_push(priorities, indices, p, n):
     priorities[i] = p
     indices[i] = n
 
-    return 1
+    # return 1
 
 
 @numba.njit()
 def siftdown(heap1, heap2, elt):
+    """Moves the element at index elt to its correct position in a heap."""
     while elt * 2 + 1 < heap1.shape[0]:
         left_child = elt * 2 + 1
         right_child = left_child + 1
@@ -138,6 +118,7 @@ def siftdown(heap1, heap2, elt):
 
 @numba.njit(parallel=True)
 def deheap_sort(distances, indices):
+    """Sorts the heaps and returns the sorted distances and indices."""
     for i in numba.prange(indices.shape[0]):
         # starting from the end of the array and moving back
         for j in range(indices.shape[1] - 1, 0, -1):
@@ -150,6 +131,34 @@ def deheap_sort(distances, indices):
 
 
 @numba.njit(
+    [
+        "f4(f4[::1],f4[::1],f4[::1])",
+        "f4(f8[::1],f8[::1],f4[::1])",
+        "f4(f8[::1],f8[::1],f8[::1])",
+    ],
+    fastmath=True,
+    locals={
+        "dim": numba.types.intp,
+        "i": numba.types.uint16,
+    },
+)
+def point_to_node_lower_bound_rdist(upper, lower, pt):
+    """
+    Calculate the lower bound of the squared Euclidean distance between a point
+    and a node in a KD-tree.
+    """
+    result = 0.0
+    dim = pt.shape[0]
+    for i in range(dim):
+        d_lo = upper[i] - pt[i] if upper[i] > pt[i] else 0.0
+        d_hi = pt[i] - lower[i] if pt[i] > lower[i] else 0.0
+        d = d_lo + d_hi
+        result += d * d
+
+    return result
+
+
+@numba.njit(
     locals={
         "node": numba.types.intp,
         "left": numba.types.intp,
@@ -158,24 +167,20 @@ def deheap_sort(distances, indices):
         "idx": numba.types.uint32,
     }
 )
-def tree_query_recursion(
-        tree,
-        node,
-        point,
-        heap_p,
-        heap_i,
-        dist_lower_bound,
-):
+def tree_query_recursion(tree, node, point, heap_p, heap_i, dist_lower_bound):
+    """
+    Traverses a KD-tree recursively to find $k$ nearest points. Updates heap
+    with neighbors inplace.
+    """
     node_info = tree.node_data[node]
 
     # ------------------------------------------------------------
-    # Case 1: query point is outside node radius:
-    #         trim it from the query
+    # Case 1: query point is outside node radius: trim node from the query
     if dist_lower_bound > heap_p[0]:
         return
 
     # ------------------------------------------------------------
-    # Case 2: this is a leaf node.  Update set of nearby points
+    # Case 2: this is a leaf node. Update set of nearby points
     elif node_info.is_leaf:
         for i in range(node_info.idx_start, node_info.idx_end):
             idx = tree.idx_array[i]
@@ -184,35 +189,55 @@ def tree_query_recursion(
                 simple_heap_push(heap_p, heap_i, d, idx)
 
     # ------------------------------------------------------------
-    # Case 3: Node is not a leaf.  Recursively query subnodes
-    #         starting with the closest
+    # Case 3: Node is not a leaf. Recursively query subnodes starting with the
+    #         closest
     else:
         left = 2 * node + 1
         right = left + 1
-        dist_lower_bound_left = point_to_node_lower_bound_rdist(tree.node_bounds[0, left], tree.node_bounds[1, left],
-                                                                point)
-        dist_lower_bound_right = point_to_node_lower_bound_rdist(tree.node_bounds[0, right], tree.node_bounds[1, right],
-                                                                 point)
+        dist_lower_bound_left = point_to_node_lower_bound_rdist(
+            tree.node_bounds[0, left], tree.node_bounds[1, left], point
+        )
+        dist_lower_bound_right = point_to_node_lower_bound_rdist(
+            tree.node_bounds[0, right], tree.node_bounds[1, right], point
+        )
 
         # recursively query subnodes
         if dist_lower_bound_left <= dist_lower_bound_right:
-            tree_query_recursion(tree, left, point, heap_p, heap_i, dist_lower_bound_left)
-            tree_query_recursion(tree, right, point, heap_p, heap_i, dist_lower_bound_right)
+            tree_query_recursion(
+                tree, left, point, heap_p, heap_i, dist_lower_bound_left
+            )
+            tree_query_recursion(
+                tree, right, point, heap_p, heap_i, dist_lower_bound_right
+            )
         else:
-            tree_query_recursion(tree, right, point, heap_p, heap_i, dist_lower_bound_right)
-            tree_query_recursion(tree, left, point, heap_p, heap_i, dist_lower_bound_left)
-
+            tree_query_recursion(
+                tree, right, point, heap_p, heap_i, dist_lower_bound_right
+            )
+            tree_query_recursion(
+                tree, left, point, heap_p, heap_i, dist_lower_bound_left
+            )
     return
 
 
 @numba.njit(parallel=True)
 def parallel_tree_query(tree, data, k=10, output_rdist=False):
-    result = (np.full((data.shape[0], k), np.inf, dtype=np.float32), np.full((data.shape[0], k), -1, dtype=np.int32))
+    """
+    Queries the KDTree for the k nearest neighbors of the given data points in
+    parallel.
+    """
+    result = (
+        np.full((data.shape[0], k), np.inf, dtype=np.float32),
+        np.full((data.shape[0], k), -1, dtype=np.int32),
+    )
 
     for i in numba.prange(data.shape[0]):
-        distance_lower_bound = point_to_node_lower_bound_rdist(tree.node_bounds[0, 0], tree.node_bounds[1, 0], data[i])
+        distance_lower_bound = point_to_node_lower_bound_rdist(
+            tree.node_bounds[0, 0], tree.node_bounds[1, 0], data[i]
+        )
         heap_priorities, heap_indices = result[0][i], result[1][i]
-        tree_query_recursion(tree, 0, data[i], heap_priorities, heap_indices, distance_lower_bound)
+        tree_query_recursion(
+            tree, 0, data[i], heap_priorities, heap_indices, distance_lower_bound
+        )
 
     if output_rdist:
         return deheap_sort(result[0], result[1])
