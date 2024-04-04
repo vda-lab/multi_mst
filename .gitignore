@@ -51,6 +51,7 @@ doc/_build/
 # Jupyter Notebook
 .ipynb_checkpoints
 notebooks/data/generated/
+!notebooks/lib/
 
 # IPython
 profile_default/

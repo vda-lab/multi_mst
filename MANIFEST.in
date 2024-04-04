@@ -1,0 +1,12 @@
+include README.md
+include pyproject.toml
+include LICENSE
+include MANIFEST.in
+include requirements.txt
+recursive-include docs *
+recursive-exclude docs/_build *
+recursive-include notebooks *.ipynb *.py
+recursive-include notebooks/data *
+recursive-exclude notebooks/data/generated *
+recursive-exclude notebooks/.ipynb_checkpoints *
+recursive-exclude notebooks/images *
