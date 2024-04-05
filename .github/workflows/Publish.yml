@@ -42,8 +42,9 @@ jobs:
         id: version
         run: |
           TAG=${{ github.ref }}
-          VERSION=${TAG#v}
-          echo "::set-output name=version::$VERSION"
+          VERSION=${TAG#refs/tags/v}
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "tag=v$VERSION" >> $GITHUB_OUTPUT
 
       - name: Move files to dist
         run: |
@@ -60,8 +61,8 @@ jobs:
           draft: false
           prerelease: false
           release_name: "Version ${{ steps.version.outputs.version }}"
-          tag_name: ${{ github.ref }}
-          body: "**Full Changelog**: https://github.com/vda-lab/multi_mst/commits/${{ github.ref }}"
+          tag_name: ${{ steps.version.outputs.tag }}
+          body: "**Full Changelog**: https://github.com/vda-lab/multi_mst/commits/${{ steps.version.outputs.tag }}"
 
       - name: Upload source distribution
         uses: actions/upload-release-asset@v1
