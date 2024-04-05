@@ -16,6 +16,7 @@ jobs:
     permissions:
       # IMPORTANT: this permission is mandatory for trusted publishing
       id-token: write
+      contents: write
     environment:
       name: pypi
       url: https://pypi.org/p/multi_mst
