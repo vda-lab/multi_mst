@@ -1,0 +1,51 @@
+name: Publish Python Package
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.number }}-${{ github.event.ref }}
+  cancel-in-progress: true
+
+on: 
+  push:
+    tags:
+      - v*
+  workflow_dispatch:
+
+jobs:
+  publish_pypi:
+    name: Publish to PyPi
+    runs-on: ubuntu-20.04
+    permissions:
+      # IMPORTANT: this permission is mandatory for trusted publishing
+      id-token: write
+    environment:
+      name: pypi
+      url: https://pypi.org/p/multi_mst
+    steps:
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: 3.9
+
+      - name: Install dependencies
+        run: |
+          pip install -U wheelhouse_uploader pyyaml
+
+      - name: Download wheels and sdist
+        uses: dawidd6/action-download-artifact@v2.27.0
+        with:
+          github_token: ${{ secrets.PUSH_TOKEN }}
+          workflow: Wheels.yml
+          workflow_conclusion: success
+          branch: main
+          path: .
+      
+      - name: Move files to dist
+        run: |
+          mkdir dist
+          mv sdist/* dist/
+          mv wheels/* dist/
+          
+      - name: Publish package to (Test)PyPI
+        uses: pypa/gh-action-pypi-publish@v1.8.5
+        # Comment lines below to publish to PyPi instead of test PyPi
+        # with:
+          # repository-url: https://test.pypi.org/legacy/

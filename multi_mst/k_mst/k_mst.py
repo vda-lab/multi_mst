@@ -172,7 +172,6 @@ class KMST(BaseEstimator):
             clean_data = X
 
         kwargs = self.get_params()
-        print(kwargs, self.umap_kwargs)
         self.mst_indices_, self.mst_distances_, self._umap = kMST(
             clean_data, umap_kwargs=self.umap_kwargs, **kwargs
         )
