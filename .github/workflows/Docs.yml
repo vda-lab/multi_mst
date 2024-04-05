@@ -7,6 +7,11 @@ on:
   push:
     branches:
     - main
+    paths:
+      - 'doc/**'
+      - 'multi_mst/k_mst/k_mst.py'
+      - 'multi_mst/noisy_mst/noisy_mst.py'
+      - '.github/workflows/Docs.yml'
   workflow_dispatch:
 
 jobs:
