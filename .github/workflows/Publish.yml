@@ -27,13 +27,13 @@ jobs:
 
       - name: Install dependencies
         run: |
-          pip install -U wheelhouse_uploader pyyaml
+          pip install -U pyyaml
 
-      - name: Download wheels and sdist
+      - name: Download sdist
         uses: dawidd6/action-download-artifact@v2.27.0
         with:
           github_token: ${{ secrets.PUSH_TOKEN }}
-          workflow: Wheels.yml
+          workflow: Tests.yml
           workflow_conclusion: success
           branch: main
           path: .
@@ -42,7 +42,6 @@ jobs:
         run: |
           mkdir dist
           mv sdist/* dist/
-          mv wheels/* dist/
           
       - name: Publish package to (Test)PyPI
         uses: pypa/gh-action-pypi-publish@v1.8.5

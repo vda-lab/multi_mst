@@ -56,12 +56,12 @@ jobs:
           path: dist/*.tar.gz
           if-no-files-found: error
 
-  build_wheels:
-    name: Build wheel for cp${{ matrix.python }}-${{ matrix.platform_id }}-${{ matrix.manylinux_image }}
+  test_sdist:
+    name: Test sdist for cp${{ matrix.python }}-${{ matrix.platform_id }}-${{ matrix.manylinux_image }}
     needs: build_sdist
     runs-on: ${{ matrix.os }}
     strategy:
-      fail-fast: false
+      fail-fast: true
       matrix:
         include:
           - os: windows-latest
@@ -108,26 +108,16 @@ jobs:
       - name: Setup Python
         uses: actions/setup-python@v4
         with:
-          python-version: '3.9'  # update once build dependencies are available
+          python-version: ${{ matrix.python }}
+          cache: 'pip'
 
-      - name: Build and Test wheels
-        uses: pypa/cibuildwheel@51f5c7fe68ff24694d5a6ac0eb3ad476ddd062a8 # v2.13.0
-        with: 
-          package-dir: dist/${{ needs.build_sdist.outputs.SDIST_NAME }}
-        env:
-          CIBW_BUILD: cp${{ matrix.python }}-${{ matrix.platform_id }}
-          CIBW_ARCHS: all
-          CIBW_MANYLINUX_X86_64_IMAGE: ${{ matrix.manylinux_image }}
-          CIBW_MANYLINUX_I686_IMAGE: ${{ matrix.manylinux_image }}
-          CIBW_TEST_REQUIRES: pytest matplotlib pandas networkx
-          CIBW_TEST_COMMAND: pytest {package}/tests
-          CIBW_BUILD_VERBOSITY: 1
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pytest
 
-      - name: Store artifacts
-        uses: actions/upload-artifact@v3
-        with:
-          name: wheels
-          path: wheelhouse/*.whl
-          if-no-files-found: ignore
-
+      - name: Run tests
+        run: |
+          pip install dist/${{ needs.build_sdist.outputs.SDIST_NAME }}
+          python -c "from multi_mst.tests import run_tests; run_tests()"
   
