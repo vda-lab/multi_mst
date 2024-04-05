@@ -1,6 +1,7 @@
 import numpy as np
 import warnings as warn
 from umap import UMAP
+from scipy.sparse import coo_matrix
 from sklearn.neighbors import KDTree
 from sklearn.utils import check_array
 from sklearn.base import BaseEstimator
@@ -29,7 +30,7 @@ def validate_parameters(data, num_trees, noise_fraction, min_samples):
     return data
 
 
-def noisyMST(data, num_trees=5, noise_fraction=0.1, min_samples=1, umap_kwargs=None):
+def noisyMST(data, num_trees=3, noise_fraction=0.1, min_samples=1, umap_kwargs=None):
     """
     Computes a union of $k$ noisy MSTs for the given data. Adapts the boruvka
     algorithm construct multiple noisy miminum spanning trees.
@@ -45,7 +46,7 @@ def noisyMST(data, num_trees=5, noise_fraction=0.1, min_samples=1, umap_kwargs=N
         Adds Gaussian noise with scale=noise_fraction * distance to every computed
         distance value.
     num_trees: int, optional
-        The number of noisy MSTS to create. Default is 5.
+        The number of noisy MSTS to create. Default is 3.
     min_samples: int, optional
         The number of neighbors for computing the mutual reachability distance.
         Value must be lower or equal to the number of neighbors. `epsilon`
@@ -96,7 +97,7 @@ class NoisyMST(BaseEstimator):
     Parameters
     ----------
     num_trees: int, optional
-        The number of minimum spanning trees created. Default is 5.
+        The number of minimum spanning trees created. Default is 3.
     noise_fraction:
         Adds Gaussian noise with scale=noise_fraction * distance to every computed
         distance value.
@@ -129,12 +130,13 @@ class NoisyMST(BaseEstimator):
     """
 
     def __init__(
-        self, *, num_trees=5, noise_fraction=0.1, min_samples=1, **umap_kwargs
+        self, *, num_trees=3, noise_fraction=0.1, min_samples=1, **umap_kwargs
     ):
         self.num_trees = num_trees
         self.noise_fraction = noise_fraction
         self.min_samples = min_samples
         self.umap_kwargs = umap_kwargs
+        # TODO: Sklearn does not support **kwargs in __init__ for BaseEstimator...
 
     def fit(self, X, y=None, **fit_params):
         """
@@ -171,22 +173,27 @@ class NoisyMST(BaseEstimator):
 
         kwargs = self.get_params()
         self.mst_indices_, self.mst_distances_, self._umap = noisyMST(
-            clean_data, **kwargs
+            clean_data, umap_kwargs=self.umap_kwargs, **kwargs
         )
         self.graph_ = self._umap.graph_.copy()
         self.embedding_ = (
-            self._umap.embedding_.copy() if self._umap.embedding_ is not None else None
+            self._umap.embedding_.copy() if hasattr(self._umap, "embedding_") else None
         )
 
         if not self._all_finite:
-            self.graph_.shape = (X.shape[0], X.shape[0])
+            self.graph_ = self.graph_.tocoo()
             for i in range(len(self.graph_.data)):
                 self.graph_.row[i] = internal_to_raw[self.graph_.row[i]]
                 self.graph_.col[i] = internal_to_raw[self.graph_.col[i]]
+            self.graph_ = coo_matrix(
+                (self.graph_.data, (self.graph_.row, self.graph_.col)),
+                shape=(X.shape[0], X.shape[0]),
+            )
 
-            new_embedding = np.full((X.shape[0], self.num_components), np.nan)
-            new_embedding[finite_index] = self.embedding_
-            self.embedding_ = new_embedding
+            if self.embedding_ is not None:
+                new_embedding = np.full((X.shape[0], self.embedding_.shape[1]), np.nan)
+                new_embedding[finite_index] = self.embedding_
+                self.embedding_ = new_embedding
 
             new_indices = np.full(
                 (X.shape[0], self.mst_indices_.shape[1]), -1, dtype=np.int32

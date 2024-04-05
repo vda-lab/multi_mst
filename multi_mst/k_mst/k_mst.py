@@ -1,6 +1,7 @@
 import numpy as np
 import warnings as warn
 from umap import UMAP
+from scipy.sparse import coo_matrix
 from sklearn.neighbors import KDTree
 from sklearn.utils import check_array
 from sklearn.base import BaseEstimator
@@ -29,7 +30,7 @@ def validate_parameters(data, num_neighbors, min_samples, epsilon):
     return data, epsilon
 
 
-def kMST(data, num_neighbors=5, min_samples=1, epsilon=None, umap_kwargs=None):
+def kMST(data, num_neighbors=3, min_samples=1, epsilon=None, umap_kwargs=None):
     """
     Computes a $k$-MST for the given data. Adapts the boruvka algorithm to look
     for $k$ candidate edges per point, of which the $k$ best per connected
@@ -43,7 +44,7 @@ def kMST(data, num_neighbors=5, min_samples=1, epsilon=None, umap_kwargs=None):
     data: array-like
         The data to construct a MST for.
     num_neighbors: int, optional
-        The number of edges to connect between each fragement. Default is 5.
+        The number of edges to connect between each fragement. Default is 3.
     min_samples: int, optional
         The number of neighbors for computing the mutual reachability distance.
         Value must be lower or equal to the number of neighbors. `epsilon`
@@ -98,7 +99,7 @@ class KMST(BaseEstimator):
     Parameters
     ----------
     num_neighbors: int, optional
-        The number of edges to connect between each fragement. Default is 5.
+        The number of edges to connect between each fragement. Default is 35.
     min_samples: int, optional
         The number of neighbors for computing the mutual reachability distance.
         Value must be lower or equal to the number of neighbors. `epsilon`
@@ -130,11 +131,12 @@ class KMST(BaseEstimator):
         missing values. Use the graph_ and embedding_ attributes instead!
     """
 
-    def __init__(self, *, num_neighbors=5, min_samples=1, epsilon=None, **umap_kwargs):
+    def __init__(self, *, num_neighbors=3, min_samples=1, epsilon=None, **umap_kwargs):
         self.num_neighbors = num_neighbors
         self.min_samples = min_samples
         self.epsilon = epsilon
         self.umap_kwargs = umap_kwargs
+        # TODO: Sklearn does not support **kwargs in __init__ for BaseEstimator...
 
     def fit(self, X, y=None, **fit_params):
         """
@@ -170,21 +172,29 @@ class KMST(BaseEstimator):
             clean_data = X
 
         kwargs = self.get_params()
-        self.mst_indices_, self.mst_distances_, self._umap = kMST(clean_data, **kwargs)
+        print(kwargs, self.umap_kwargs)
+        self.mst_indices_, self.mst_distances_, self._umap = kMST(
+            clean_data, umap_kwargs=self.umap_kwargs, **kwargs
+        )
         self.graph_ = self._umap.graph_.copy()
         self.embedding_ = (
-            self._umap.embedding_.copy() if self._umap.embedding_ is not None else None
+            self._umap.embedding_.copy() if hasattr(self._umap, "embedding_") else None
         )
 
         if not self._all_finite:
-            self.graph_.shape = (X.shape[0], X.shape[0])
+            self.graph_ = self.graph_.tocoo()
             for i in range(len(self.graph_.data)):
                 self.graph_.row[i] = internal_to_raw[self.graph_.row[i]]
                 self.graph_.col[i] = internal_to_raw[self.graph_.col[i]]
+            self.graph_ = coo_matrix(
+                (self.graph_.data, (self.graph_.row, self.graph_.col)),
+                shape=(X.shape[0], X.shape[0]),
+            )
 
-            new_embedding = np.full((X.shape[0], self.num_components), np.nan)
-            new_embedding[finite_index] = self.embedding_
-            self.embedding_ = new_embedding
+            if self.embedding_ is not None:
+                new_embedding = np.full((X.shape[0], self.embedding_.shape[1]), np.nan)
+                new_embedding[finite_index] = self.embedding_
+                self.embedding_ = new_embedding
 
             new_indices = np.full(
                 (X.shape[0], self.mst_indices_.shape[1]), -1, dtype=np.int32

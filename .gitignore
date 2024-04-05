@@ -65,3 +65,5 @@ venv/
 ENV/
 env.bak/
 venv.bak/
+
+*.code-workspace
