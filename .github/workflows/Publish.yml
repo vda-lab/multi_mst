@@ -41,14 +41,14 @@ jobs:
       - name: Move files to dist
         run: |
           mkdir dist
-          mv sdist/* dist/
+          mv dists/* dist/
           if [[ ! -f dist/multi_mst-${{ steps.version.outputs.version }}.tar.gz ]] ; then exit 1; fi
       
       - name: Create Github Release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  
         run: |
-          gh release create -R vda-lab/multi_mst -t "Version ${{ steps.version.outputs.version }}" -n "**Full Changelog**: https://github.com/vda-lab/pyflasc/commits/${{ steps.version.outputs.tag }}" "${{ steps.version.outputs.tag }}" dist/*.tar.gz
+          gh release create -R vda-lab/multi_mst -t "Version ${{ steps.version.outputs.version }}" -n "**Full Changelog**: https://github.com/vda-lab/pyflasc/commits/${{ steps.version.outputs.tag }}" "${{ steps.version.outputs.tag }}" dist/*.whl dist/*.tar.gz
         
       - name: Publish package to (Test)PyPI
         uses: pypa/gh-action-pypi-publish@v1.8.5
