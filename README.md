@@ -1,3 +1,7 @@
+[![PyPI version](https://badge.fury.io/py/multi-mst.svg)](https://badge.fury.io/py/multi-mst)
+[![Tests](https://github.com/vda-lab/multi_mst/actions/workflows/Tests.yml/badge.svg?branch=main)](https://github.com/vda-lab/multi_mst/actions/workflows/Tests.yml)
+
+
 Manifold Modelling with Minimum Spanning Trees
 ==============================================
 
