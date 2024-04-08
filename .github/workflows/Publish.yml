@@ -1,7 +1,7 @@
 name: Publish Python Package
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.number }}-${{ github.event.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 on: 
   push:
@@ -20,15 +20,14 @@ jobs:
     environment:
       name: pypi
       url: https://pypi.org/p/multi_mst
-    steps:
-      - name: Setup Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: 3.9
-
-      - name: Install dependencies
+    steps:     
+      - name: Extract version
+        id: version
         run: |
-          pip install -U pyyaml
+          TAG=${{ github.ref }}
+          VERSION=${TAG#refs/tags/v}
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "tag=v$VERSION" >> $GITHUB_OUTPUT
 
       - name: Download sdist
         uses: dawidd6/action-download-artifact@v2.27.0
@@ -38,45 +37,21 @@ jobs:
           workflow_conclusion: success
           branch: main
           path: .
-      
-      - name: Extract version
-        id: version
-        run: |
-          TAG=${{ github.ref }}
-          VERSION=${TAG#refs/tags/v}
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
-          echo "tag=v$VERSION" >> $GITHUB_OUTPUT
-
+    
       - name: Move files to dist
         run: |
           mkdir dist
           mv sdist/* dist/
           if [[ ! -f dist/multi_mst-${{ steps.version.outputs.version }}.tar.gz ]] ; then exit 1; fi
-
-      - name: Make github release
-        id: make_release
-        uses: actions/create-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          draft: false
-          prerelease: false
-          release_name: "Version ${{ steps.version.outputs.version }}"
-          tag_name: ${{ steps.version.outputs.tag }}
-          body: "**Full Changelog**: https://github.com/vda-lab/multi_mst/commits/${{ steps.version.outputs.tag }}"
-
-      - name: Upload source distribution
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.make_release.outputs.upload_url }}
-          asset_path: dist/multi_mst-${{ steps.version.outputs.version }}.tar.gz
-          asset_name: multi_mst-${{ steps.version.outputs.version }}.tar.gz
-          asset_content_type: application/gzip
       
+      - name: Create Github Release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  
+        run: |
+          gh release create -R vda-lab/multi_mst -t "Version ${{ steps.version.outputs.version }}" -n "**Full Changelog**: https://github.com/vda-lab/pyflasc/commits/${{ steps.version.outputs.tag }}" "${{ steps.version.outputs.tag }}" dist/*.tar.gz
+        
       - name: Publish package to (Test)PyPI
         uses: pypa/gh-action-pypi-publish@v1.8.5
         # Comment lines below to publish to PyPi instead of test PyPi
         # with:
-          # repository-url: https://test.pypi.org/legacy/
+        #   repository-url: https://test.pypi.org/legacy/
