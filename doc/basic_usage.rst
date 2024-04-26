@@ -35,6 +35,7 @@ sparse regions, retaining a reasonably uniform manifold approximation graph.
     X, t = make_swiss_roll(n_samples=2000, noise=0.5, hole=True)
     projector = NoisyMST(num_trees=10, noise_fraction=1.0).fit(X)
 
+    # Draw the network
     xs = projector.embedding_[:, 0]
     ys = projector.embedding_[:, 1]
     coo_matrix = projector.graph_.tocoo()
@@ -84,6 +85,7 @@ alternative edges.
     X, t = make_swiss_roll(n_samples=2000, noise=0.5, hole=True)
     projector = KMST(num_neighbors=3, epsilon=2.0).fit(X)
 
+    # Draw the network
     xs = projector.embedding_[:, 0]
     ys = projector.embedding_[:, 1]
     coo_matrix = projector.graph_.tocoo()

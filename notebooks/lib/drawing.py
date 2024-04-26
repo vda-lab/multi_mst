@@ -3,8 +3,8 @@ import networkx as nx
 import matplotlib.pyplot as plt
 import matplotlib.collections as mc
 
-def _draw(xs, ys, sources, targets, color, alpha=0.2):
-    plt.figure(figsize=(1.7438, 1.7438))
+def _draw(xs, ys, sources, targets, color, alpha=0.2, s=1.7438):
+    plt.figure(figsize=(s, s))
     s = plt.scatter(xs, ys, c=color, s=0.3, edgecolors="none", linewidth=0, cmap='viridis', alpha=alpha)
     lc = mc.LineCollection(
         list(zip(zip(xs[sources], ys[sources]), zip(xs[targets], ys[targets]))),
@@ -40,14 +40,17 @@ def draw_umap(p, color=None, name='default', alg='umap'):
 
 
 def draw_force(p, color=None, name='default', alg='umap'):
-    g = nx.Graph(p.graph_)
-    pos = nx.nx_agraph.graphviz_layout(g, prog="sfdp")
-    coords = np.nan * np.ones((p.graph_.shape[0], 2), dtype=np.float64)
-    coords[
-        np.fromiter(pos.keys(), dtype=np.int32), :
-    ] = np.fromiter(pos.values(), dtype=np.dtype((np.float64, 2)))
-    np.save(f'./data/generated/{name}_force_{alg}.npy', coords)
+    coords, g = compute_force(p)
     sources, targets = [np.asarray(x) for x in zip(*g.edges())]
     _draw(coords[:, 0], coords[:, 1], sources, targets, color)
     plt.savefig(f'./images/{name}_force_{alg}.png', dpi=600, pad_inches=0)
     plt.show()
+
+
+def compute_force(p):
+    g = nx.Graph(p.graph_)
+    pos = nx.nx_agraph.graphviz_layout(g, prog="sfdp")
+    coords = np.nan * np.ones((p.graph_.shape[0], 2), dtype=np.float64)
+    for k, v in pos.items():
+        coords[k, :] = v
+    return coords, g

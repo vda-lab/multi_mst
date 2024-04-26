@@ -17,7 +17,7 @@ Noisy Minimum Spanning Tree Union
 
 The noisy minimum spanning tree union ($n$-MST) is inspired by Pathfinder
 networks that, with a specific parameter selection, yield the union set of all
-possible MSTs in a network (see, e.g.,[[1]], [[2]]). We compute noisy MSTs to
+possible MSTs in a network (see, e.g., [[1]], [[2]]). We compute noisy MSTs to
 detect alternative connectivity at all distance scales for distances which may
 have few identically weighted connections.
 
@@ -36,6 +36,7 @@ from multi_mst.noisy_mst import NoisyMST
 X, t = make_swiss_roll(n_samples=2000, noise=0.5, hole=True)
 projector = NoisyMST(num_trees=10, noise_fraction=1.0).fit(X)
 
+# Drawing the network
 xs = projector.embedding_[:, 0]
 ys = projector.embedding_[:, 1]
 coo_matrix = projector.graph_.tocoo()
@@ -64,7 +65,7 @@ $k$-Nearest Minimum Spanning Tree
 ---------------------------------
 
 The k-nearest Minimum Spanning Tree ($k$-MST) generalises $k$-nearest neighbour
-networks ($k$-NN) for minimum spanning trees. It adds the $k$ shortest edges
+networks ($k$-NN) to minimum spanning trees. It adds the $k$ shortest edges
 between components. Since data points start as distinct components, all $k$-NN
 edges are included in the kMST.  
 
@@ -82,6 +83,7 @@ from multi_mst.k_mst import KMST
 X, t = make_swiss_roll(n_samples=2000, noise=0.5, hole=True)
 projector = KMST(num_neighbors=3, epsilon=2.0).fit(X)
 
+# Drawing the network
 xs = projector.embedding_[:, 0]
 ys = projector.embedding_[:, 1]
 coo_matrix = projector.graph_.tocoo()
@@ -119,7 +121,7 @@ pip install multi_mst
 Acknowledgements
 ----------------
 
-Most code---including the numba KDTree, disjoint set and boruvka MST
+Most code---including the numba KDTree, disjoint set and Boruvka MST
 construction implementation---is adapted from
 [fast_hdbscan](https://github.com/TutteInstitute/fast_hdbscan).
 
