@@ -1,5 +1,5 @@
 import numpy as np
-from .noisy_mst import NoisyMST, noisyMST
+from .api import NoisyMST, noisyMST
 
 # Force JIT compilation on import
 random_state = np.random.RandomState(42)

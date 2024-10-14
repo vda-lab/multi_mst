@@ -95,8 +95,8 @@ def test_with_missing_data():
 def test_with_missing_data_graph_mode():
     """Tests with nan data."""
     clean_indices = list(range(1, 6)) + list(range(7, X.shape[0]))
-    model = KMST(transform_mode='graph').fit(X_missing_data)
-    clean_model = KMST(transform_mode='graph').fit(X_missing_data[clean_indices])
+    model = KMST(umap_kwargs=dict(transform_mode='graph')).fit(X_missing_data)
+    clean_model = KMST(umap_kwargs=dict(transform_mode='graph')).fit(X_missing_data[clean_indices])
     
     assert np.all(model.mst_indices_[0, :] == -1)
     assert np.isinf(model.mst_distances_[0, :]).all()
@@ -112,8 +112,8 @@ def test_with_missing_data_graph_mode():
 
 
 def test_graph_mode():
-    """Tests with transform_mode='graph'."""
-    p = KMST(transform_mode='graph')
+    """Tests with umap_kwargs=dict(transform_mode='graph')."""
+    p = KMST(umap_kwargs=dict(transform_mode='graph'))
     embedding = p.fit_transform(X)
     
     assert embedding is None
@@ -122,7 +122,7 @@ def test_graph_mode():
 
 def test_min_samples():
     """Tests with higher min_samples."""
-    p = KMST(min_samples=3, transform_mode='graph').fit(X)
+    p = KMST(min_samples=3, umap_kwargs=dict(transform_mode='graph')).fit(X)
     
     assert p.mst_indices_.shape[1] >= 3 # Max(min_samples, num_neighbors)
     assert p.mst_distances_.shape[1] >= 3 # Max(min_samples, num_neighbors)
@@ -131,7 +131,7 @@ def test_min_samples():
 
 def test_num_neighbors():
     """Tests with lower num_neighbors."""
-    p = KMST(num_neighbors=1, transform_mode='graph').fit(X)
+    p = KMST(num_neighbors=1, umap_kwargs=dict(transform_mode='graph')).fit(X)
     
     assert p.mst_indices_.shape[1] >= 1 # Max(min_samples, num_neighbors)
     assert p.mst_distances_.shape[1] >= 1 # Max(min_samples, num_neighbors)
@@ -140,8 +140,8 @@ def test_num_neighbors():
 
 def test_epsilon():
     """Tests with epsilon."""
-    base = KMST(transform_mode='graph').fit(X)
-    p = KMST(epsilon=1.1, transform_mode='graph').fit(X)
+    base = KMST(umap_kwargs=dict(transform_mode='graph')).fit(X)
+    p = KMST(epsilon=1.1, umap_kwargs=dict(transform_mode='graph')).fit(X)
 
     assert connected_components(p._umap.graph_, directed=False, return_labels=False) == 1
     assert p.graph_.nnz < base.graph_.nnz
@@ -149,7 +149,7 @@ def test_epsilon():
 
 def test_num_components():
     """Tests with higher num_components."""
-    p = KMST(n_components=3)
+    p = KMST(umap_kwargs=dict(n_components=3))
     
     embedding = p.fit_transform(X)
     assert embedding.shape[0] == X.shape[0]

@@ -86,7 +86,7 @@ def test_with_missing_data():
 
 def test_with_missing_data_graph_mode():
     """Tests with nan data."""
-    model = NoisyMST(transform_mode='graph').fit(X_missing_data)
+    model = NoisyMST(umap_kwargs=dict(transform_mode='graph')).fit(X_missing_data)
     
     assert np.all(model.mst_indices_[0, :] == -1)
     assert np.isinf(model.mst_distances_[0, :]).all()
@@ -98,8 +98,8 @@ def test_with_missing_data_graph_mode():
 
 
 def test_graph_mode():
-    """Tests with transform_mode='graph'."""
-    p = NoisyMST(transform_mode='graph')
+    """Tests with umap_kwargs=dict(transform_mode='graph')."""
+    p = NoisyMST(umap_kwargs=dict(transform_mode='graph'))
     
     embedding = p.fit_transform(X)
     assert embedding is None
@@ -108,7 +108,7 @@ def test_graph_mode():
 
 def test_min_samples():
     """Tests with higher min_samples."""
-    p = NoisyMST(min_samples=3, transform_mode='graph').fit(X)
+    p = NoisyMST(min_samples=3, umap_kwargs=dict(transform_mode='graph')).fit(X)
     
     assert p.mst_indices_.shape[1] >= 1
     assert p.mst_distances_.shape[1] >= 1
@@ -117,7 +117,7 @@ def test_min_samples():
 
 def test_num_trees():
     """Tests with lower num_trees."""
-    p = NoisyMST(num_trees=1, transform_mode='graph').fit(X)
+    p = NoisyMST(num_trees=1, umap_kwargs=dict(transform_mode='graph')).fit(X)
     
     assert p.mst_indices_.shape[1] >= 1
     assert p.mst_distances_.shape[1] >= 1
@@ -126,7 +126,7 @@ def test_num_trees():
 
 def test_noise_fraction():
     """Tests with higher noise_fraction."""
-    p = NoisyMST(noise_fraction=0.5, transform_mode='graph').fit(X)
+    p = NoisyMST(noise_fraction=0.5, umap_kwargs=dict(transform_mode='graph')).fit(X)
       
     assert p.mst_indices_.shape[1] >= 1
     assert p.mst_distances_.shape[1] >= 1
@@ -135,7 +135,7 @@ def test_noise_fraction():
 
 def test_num_components():
     """Tests with higher num_components."""
-    p = NoisyMST(n_components=3)
+    p = NoisyMST(umap_kwargs=dict(n_components=3))
     
     embedding = p.fit_transform(X)
     assert embedding.shape[0] == X.shape[0]

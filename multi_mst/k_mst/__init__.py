@@ -1,5 +1,5 @@
 import numpy as np
-from .k_mst import KMST, kMST
+from .api import KMST, kMST
 
 # Force JIT compilation on import
 random_state = np.random.RandomState(42)

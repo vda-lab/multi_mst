@@ -10,69 +10,69 @@ from .boruvka import parallel_boruvka
 from ..kdtree import kdtree_to_numba
 
 
-def validate_parameters(data, num_neighbors, min_samples, epsilon):
+def validate_parameters(data, num_trees, noise_fraction, min_samples):
     data = check_array(data)
+    if (not (np.issubdtype(type(num_trees), np.integer) or num_trees is None)) or (
+        num_trees is not None and num_trees < 1
+    ):
+        raise ValueError("num_trees must be an integer >= 1.")
+
     if (
-        not (np.issubdtype(type(num_neighbors), np.integer) or num_neighbors is None)
-    ) or (num_neighbors is not None and num_neighbors < 1):
-        raise ValueError("num_neighbors must be an integer >= 1.")
+        not (np.issubdtype(type(noise_fraction), np.floating) or noise_fraction is None)
+    ) or (noise_fraction is not None and noise_fraction < 0.0):
+        raise ValueError("noise_fraction must be an float >= 0.0.")
 
     if (not (np.issubdtype(type(min_samples), np.integer) or min_samples is None)) or (
-        min_samples is not None and (min_samples < 1 or min_samples > num_neighbors)
+        min_samples is not None and (min_samples < 1)
     ):
-        raise ValueError("min_samples must be an integer >= 1 <= num_neighbors.")
+        raise ValueError("min_samples must be an integer >= 1.")
 
-    if epsilon is None:
-        epsilon = np.inf
-    elif not np.issubdtype(type(epsilon), np.floating) or epsilon < 1.0:
-        raise ValueError("epsilon must be None or a floating point number >= 1.0")
-
-    return data, epsilon
+    return data
 
 
-def kMST(data, num_neighbors=3, min_samples=1, epsilon=None, umap_kwargs=None):
+def noisyMST(data, num_trees=3, noise_fraction=0.1, min_samples=1, umap_kwargs=None):
     """
-    Computes a $k$-MST for the given data. Adapts the boruvka algorithm to look
-    for $k$ candidate edges per point, of which the $k$ best per connected
-    component are retained (up to $epsilon$ times the shortest distance).
+    Computes a union of $k$ noisy MSTs for the given data. Adapts the boruvka
+    algorithm construct multiple noisy miminum spanning trees.
 
-    The algorithm operates on HDBSCAN's mutual reachability distance. The result
-    graph is embedded with UMAP as if it contains normal k nearest neighbors.
+    The algorithm operates on HDBSCAN's mutual reachability Euclidean distance.
+    The resulting graph is embedded with UMAP as if it contains normal k nearest
+    neighbors.
 
     Parameters
     ----------
     data: array-like
         The data to construct a MST for.
-    num_neighbors: int, optional
-        The number of edges to connect between each fragement. Default is 3.
+    noise_fraction:
+        Adds Gaussian noise with scale=noise_fraction * distance to every computed
+        distance value.
+    num_trees: int, optional
+        The number of noisy MSTS to create. Default is 3.
     min_samples: int, optional
         The number of neighbors for computing the mutual reachability distance.
         Value must be lower or equal to the number of neighbors. `epsilon`
         operates on the mutual reachability distance, so always allows the
         nearest `min_samples` points. Acts as UMAP's `local connnectivity`
         parameter. Default is 1.
-    epsilon: float, optional
-        A fraction of the initial MST edge distance to act as upper distance
-        bound.
     umap_kwargs: dict
         Additional keyword arguments to pass to UMAP.
 
     Returns
     -------
     mst_indices_: numpy.ndarray, shape (n_samples, num_found_neighbors)
-        The kMST edges in kNN format.
+        The noisyMST edges in kNN format.
     mst_distances_: numpy.ndarray, shape (n_samples, num_found_neighbors)
-        The kMST edges in kNN format.
+        The noisyMST edges in kNN format.
     umap: umap.UMAP
         A fitted UMAP object.
     """
     if umap_kwargs is None:
         umap_kwargs = {}
-    (data, epsilon) = validate_parameters(data, num_neighbors, min_samples, epsilon)
+    data = validate_parameters(data, num_trees, noise_fraction, min_samples)
     sklearn_tree = KDTree(data)
     numba_tree = kdtree_to_numba(sklearn_tree)
     mst_indices, mst_distances = parallel_boruvka(
-        numba_tree, num_neighbors, min_samples, epsilon
+        numba_tree, num_trees, noise_fraction, min_samples
     )
     with warn.catch_warnings():
         warn.filterwarnings(
@@ -86,30 +86,30 @@ def kMST(data, num_neighbors=3, min_samples=1, epsilon=None, umap_kwargs=None):
     return (mst_indices, mst_distances, umap)
 
 
-class KMST(BaseEstimator):
+class NoisyMST(BaseEstimator):
     """
-    An SKLEARN-style estimator for computing a $k$-MST of a dataset. Adapts the
-    boruvka algorithm to look for $k$ candidate edges per point, of which the
-    $k$ best per connected component are retained (up to $epsilon$ times the
-    shortest distance).
+    An SKLEARN-style estimator for computing a union of $k$ noisy MSTs for the
+    given data. Adapts the boruvka algorithm construct multiple noisy miminum
+    spanning trees.
 
-    The algorithm operates on HDBSCAN's mutual reachability distance. The result
-    graph is embedded with UMAP as if it contains normal k nearest neighbors.
+    The algorithm operates on HDBSCAN's mutual reachability Euclidean distance.
+    The resulting graph is embedded with UMAP as if it contains normal k nearest
+    neighbors.
 
     Parameters
     ----------
-    num_neighbors: int, optional
-        The number of edges to connect between each fragement. Default is 35.
+    num_trees: int, optional
+        The number of minimum spanning trees created. Default is 3.
+    noise_fraction:
+        Adds Gaussian noise with scale=noise_fraction * distance to every computed
+        distance value.
     min_samples: int, optional
         The number of neighbors for computing the mutual reachability distance.
         Value must be lower or equal to the number of neighbors. `epsilon`
         operates on the mutual reachability distance, so always allows the
         nearest `min_samples` points. Acts as UMAP's `local connnectivity`
         parameter. Default is 1.
-    epsilon: float, optional
-        A fraction of the initial MST edge distance to act as upper distance
-        bound.
-    **umap_kwargs: dict
+    umap_kwargs: dict
         Additional keyword arguments to pass to UMAP.
 
     Attributes
@@ -131,12 +131,13 @@ class KMST(BaseEstimator):
         missing values. Use the graph_ and embedding_ attributes instead!
     """
 
-    def __init__(self, *, num_neighbors=3, min_samples=1, epsilon=None, **umap_kwargs):
-        self.num_neighbors = num_neighbors
+    def __init__(
+        self, *, num_trees=3, noise_fraction=0.1, min_samples=1, umap_kwargs=None
+    ):
+        self.num_trees = num_trees
+        self.noise_fraction = noise_fraction
         self.min_samples = min_samples
-        self.epsilon = epsilon
         self.umap_kwargs = umap_kwargs
-        # TODO: Sklearn does not support **kwargs in __init__ for BaseEstimator...
 
     def fit(self, X, y=None, **fit_params):
         """
@@ -172,8 +173,8 @@ class KMST(BaseEstimator):
             clean_data = X
 
         kwargs = self.get_params()
-        self.mst_indices_, self.mst_distances_, self._umap = kMST(
-            clean_data, umap_kwargs=self.umap_kwargs, **kwargs
+        self.mst_indices_, self.mst_distances_, self._umap = noisyMST(
+            clean_data, **kwargs
         )
         self.graph_ = self._umap.graph_.copy()
         self.embedding_ = (

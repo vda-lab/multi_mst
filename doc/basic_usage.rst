@@ -111,6 +111,52 @@ alternative edges.
 .. figure:: _static/k_mst.png
 
 
+-------------------
+Approximate $k$-MST
+-------------------
+
+Computing $k$-MSTs using KDTrees can be expensive on some datasets. We provide a
+version of the algorithm based on Nearest Neighbour Descent for quicker
+approximations. We combined Boruvka's algorithm with NNDescent to find
+neighbours that are not already connected in the MST being build.
+
+
+.. code:: python
+
+    import matplotlib.pyplot as plt
+    import matplotlib.collections as mc
+    from sklearn.datasets import make_swiss_roll
+    from multi_mst.k_mst_descent import KMSTDescent
+
+    X, t = make_swiss_roll(n_samples=2000, noise=0.5, hole=True)
+    projector = KMSTDescent(num_neighbors=3, epsilon=2.0).fit(X)
+
+    # Draw the network
+    xs = projector.embedding_[:, 0]
+    ys = projector.embedding_[:, 1]
+    coo_matrix = projector.graph_.tocoo()
+    sources = coo_matrix.row
+    targets = coo_matrix.col
+
+    plt.figure(figsize=(4, 3))
+    plt.scatter(xs, ys, c=t, s=1, edgecolors="none", linewidth=0, cmap="viridis")
+    lc = mc.LineCollection(
+        list(zip(zip(xs[sources], ys[sources]), zip(xs[targets], ys[targets]))),
+        linewidth=0.2,
+        zorder=-1,
+        alpha=0.5,
+        color="k",
+    )
+    ax = plt.gca()
+    ax.add_collection(lc)
+    ax.set_aspect("equal")
+    plt.subplots_adjust(0, 0, 1, 1)
+    plt.axis("off")
+    plt.show()
+
+.. figure:: _static/k_mst_descent.png
+
+
 -------------------------
 Installation Instructions
 -------------------------
@@ -126,7 +172,8 @@ Acknowledgements
 ----------------
 
 Most code---including the numba KDTree, disjoint set and boruvka MST
-construction implementation---is adapted from `fast_hdbscan`_.
+construction implementation---is adapted from `fast_hdbscan`_. The 
+NNDescent implementation is adapted from `pynndescent`_.
 
 -------
 License
@@ -138,3 +185,4 @@ LICENSE file for details.
 .. _1: https://onlinelibrary.wiley.com/doi/10.1002/asi.20904
 .. _2: https://ieeexplore.ieee.org/document/8231853
 .. _fast_hdbscan: https://github.com/TutteInstitute/fast_hdbscan
+.. _pynndescent: https://github.com/lmcinnes/pynndescent
