@@ -32,7 +32,7 @@ def validate_parameters(data, num_trees, noise_fraction, min_samples):
 
 def noisyMST(data, num_trees=3, noise_fraction=0.1, min_samples=1, umap_kwargs=None):
     """
-    Computes a union of $k$ noisy MSTs for the given data. Adapts the boruvka
+    Computes a union of k noisy MSTs for the given data. Adapts the boruvka
     algorithm construct multiple noisy miminum spanning trees.
 
     The algorithm operates on HDBSCAN's mutual reachability Euclidean distance.
@@ -88,7 +88,7 @@ def noisyMST(data, num_trees=3, noise_fraction=0.1, min_samples=1, umap_kwargs=N
 
 class NoisyMST(BaseEstimator):
     """
-    An SKLEARN-style estimator for computing a union of $k$ noisy MSTs for the
+    An SKLEARN-style estimator for computing a union of k noisy MSTs for the
     given data. Adapts the boruvka algorithm construct multiple noisy miminum
     spanning trees.
 
@@ -141,7 +141,7 @@ class NoisyMST(BaseEstimator):
 
     def fit(self, X, y=None, **fit_params):
         """
-        Computes the $\epsilon k$-MST of the given data.
+        Computes the k-MST of the given data.
 
         Parameters
         ----------
@@ -212,7 +212,7 @@ class NoisyMST(BaseEstimator):
 
     def fit_transform(self, X, y=None, **fit_params):
         """
-        Computes the $\epsilon k$-MST of the given data.
+        Computes the k-MST of the given data.
 
         Parameters
         ----------

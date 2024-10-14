@@ -32,9 +32,9 @@ def validate_parameters(data, num_neighbors, min_samples, epsilon):
 
 def kMST(data, num_neighbors=3, min_samples=1, epsilon=None, umap_kwargs=None):
     """
-    Computes a $k$-MST of a dataset. Adapts the boruvka algorithm to look for
-    $k$ candidate edges per point, of which the $k$ best per connected component
-    are retained (up to $epsilon$ times the shortest distance).
+    Computes a k-MST of a dataset. Adapts the boruvka algorithm to look for
+    k candidate edges per point, of which the k best per connected component
+    are retained (up to epsilon times the shortest distance).
 
     The algorithm operates on HDBSCAN's mutual reachability Euclidean distance.
     The resulting graph is embedded with UMAP as if it contains normal k nearest
@@ -89,9 +89,9 @@ def kMST(data, num_neighbors=3, min_samples=1, epsilon=None, umap_kwargs=None):
 
 class KMST(BaseEstimator):
     """
-    An SKLEARN-style estimator for computing a $k$-MST of a dataset. Adapts the
-    boruvka algorithm to look for $k$ candidate edges per point, of which the
-    $k$ best per connected component are retained (up to $epsilon$ times the
+    An SKLEARN-style estimator for computing a k-MST of a dataset. Adapts the
+    boruvka algorithm to look for k candidate edges per point, of which the
+    k best per connected component are retained (up to epsilon times the
     shortest distance).
 
     The algorithm operates on HDBSCAN's mutual reachability Euclidean distance.
@@ -141,7 +141,7 @@ class KMST(BaseEstimator):
 
     def fit(self, X, y=None, **fit_params):
         """
-        Computes the $\epsilon k$-MST of the given data.
+        Computes the k-MST of the given data.
 
         Parameters
         ----------
@@ -212,7 +212,7 @@ class KMST(BaseEstimator):
 
     def fit_transform(self, X, y=None, **fit_params):
         """
-        Computes the $\epsilon k$-MST of the given data.
+        Computes the k-MST of the given data.
 
         Parameters
         ----------

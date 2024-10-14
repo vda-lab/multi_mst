@@ -8,21 +8,21 @@ Noisy MST
     :members: NoisyMST, noisyMST
 
 
-$k$-MST
+k-MST
 -------
 
 .. automodule:: multi_mst.k_mst
     :members: KMST, kMST
 
 
-$k$-MST Descent
+k-MST Descent
 ---------------
 
 .. automodule:: multi_mst.k_mst_descent
     :members: KMSTDescent, kMSTDescent
 
 
-Recall logging $k$-MST Descent
+Recall logging k-MST Descent
 ------------------------------
 
 .. automodule:: multi_mst.k_mst_descent_recall

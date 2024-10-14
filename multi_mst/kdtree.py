@@ -169,7 +169,7 @@ def point_to_node_lower_bound_rdist(upper, lower, pt):
 )
 def tree_query_recursion(tree, node, point, heap_p, heap_i, dist_lower_bound):
     """
-    Traverses a KD-tree recursively to find $k$ nearest points. Updates heap
+    Traverses a KD-tree recursively to find k nearest points. Updates heap
     with neighbors inplace.
     """
     node_info = tree.node_data[node]

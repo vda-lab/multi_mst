@@ -51,7 +51,7 @@ def kMSTDescentLogRecall(
 ):
     """
     Computes approximate k-MSTs using NN-Descent. Adapts the boruvka algorithm
-    to look for k candidate edges per point, of which the $k$ best per connected
+    to look for k candidate edges per point, of which the k best per connected
     component are retained (up to epsilon times the shortest distance). Adapts
     NN-Descent to find MST edges, i.e., neighbours that are not already
     connected in the MST build up so far.
@@ -158,7 +158,7 @@ class KMSTDescentLogRecall(BaseEstimator):
     """
     An SKLEARN-style estimator for computing approximate k-MSTs using
     NN-Descent. Adapts the boruvka algorithm to look for k candidate edges per
-    point, of which the $k$ best per connected component are retained (up to
+    point, of which the k best per connected component are retained (up to
     epsilon times the shortest distance). Adapts NN-Descent to find MST edges,
     i.e., neighbours that are not already connected in the MST build up so far.
 
@@ -238,7 +238,7 @@ class KMSTDescentLogRecall(BaseEstimator):
 
     def fit(self, X, y=None, **fit_params):
         """
-        Computes the $k$-MST of the given data.
+        Computes the k-MST of the given data.
 
         Parameters
         ----------
@@ -309,7 +309,7 @@ class KMSTDescentLogRecall(BaseEstimator):
 
     def fit_transform(self, X, y=None, **fit_params):
         """
-        Computes the $k$-MST of the given data.
+        Computes the k-MST of the given data.
 
         Parameters
         ----------
