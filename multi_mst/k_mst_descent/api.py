@@ -103,7 +103,7 @@ def kMSTDescent(
         The number of neighbors for computing the mutual reachability distance.
         Value must be lower or equal to the number of neighbors. `epsilon`
         operates on the mutual reachability distance, so always allows the
-        nearest `min_samples` points. Acts as UMAP's `local connnectivity`
+        nearest `min_samples` points. Acts as UMAP's `local connectivity`
         parameter. Default is 1.
     epsilon: float, optional
         A fraction of the initial MST edge distance to act as upper distance
@@ -114,11 +114,11 @@ def kMSTDescent(
     umap_kwargs: dict
         Additional keyword arguments passed to UMAP.
     nn_kwargs: dict
-        Additional keyword arguments passsed to NNDescent.
+        Additional keyword arguments passed to NNDescent.
     n_jobs : int, optional
         The number of threads to use for the computation. -1 means using all
         threads.
-    
+
     Returns
     -------
     mst_indices_: numpy.ndarray, shape (n_samples, num_found_neighbors)
@@ -155,7 +155,10 @@ def kMSTDescent(
         )
     with warn.catch_warnings():
         warn.filterwarnings(
-            "ignore", category=UserWarning, module="umap.umap_", lineno=2010
+            "ignore",
+            category=UserWarning,
+            module="umap.umap_",
+            message=".*is not an NNDescent object.*",
         )
         umap = UMAP(
             n_neighbors=mst_indices.shape[1],
@@ -236,7 +239,7 @@ class KMSTDescent(BaseEstimator):
         Additional keyword arguments passsed to NNDescent.
     n_jobs : int, optional
         The number of threads to use for the computation. -1 means using all
-        threads.    
+        threads.
 
     Attributes
     ----------

@@ -76,7 +76,10 @@ def noisyMST(data, num_trees=3, noise_fraction=0.1, min_samples=1, umap_kwargs=N
     )
     with warn.catch_warnings():
         warn.filterwarnings(
-            "ignore", category=UserWarning, module="umap.umap_", lineno=2010
+            "ignore",
+            category=UserWarning,
+            module="umap.umap_",
+            message=".*is not an NNDescent object.*",
         )
         umap = UMAP(
             n_neighbors=mst_indices.shape[1],

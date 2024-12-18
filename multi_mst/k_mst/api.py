@@ -77,7 +77,10 @@ def kMST(data, num_neighbors=3, min_samples=1, epsilon=None, umap_kwargs=None):
     )
     with warn.catch_warnings():
         warn.filterwarnings(
-            "ignore", category=UserWarning, module="umap.umap_", lineno=2010
+            "ignore",
+            category=UserWarning,
+            module="umap.umap_",
+            message=".*is not an NNDescent object.*",
         )
         umap = UMAP(
             n_neighbors=mst_indices.shape[1],
@@ -133,7 +136,9 @@ class KMST(BaseEstimator):
         missing values. Use the graph_ and embedding_ attributes instead!
     """
 
-    def __init__(self, *, num_neighbors=3, min_samples=1, epsilon=None, umap_kwargs=None):
+    def __init__(
+        self, *, num_neighbors=3, min_samples=1, epsilon=None, umap_kwargs=None
+    ):
         self.num_neighbors = num_neighbors
         self.min_samples = min_samples
         self.epsilon = epsilon
@@ -173,9 +178,7 @@ class KMST(BaseEstimator):
             clean_data = X
 
         kwargs = self.get_params()
-        self.mst_indices_, self.mst_distances_, self._umap = kMST(
-            clean_data, **kwargs
-        )
+        self.mst_indices_, self.mst_distances_, self._umap = kMST(clean_data, **kwargs)
         self.graph_ = self._umap.graph_.copy()
         self.embedding_ = (
             self._umap.embedding_.copy() if hasattr(self._umap, "embedding_") else None
