@@ -48,7 +48,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  
         run: |
-          gh release create -R vda-lab/multi_mst -t "Version ${{ steps.version.outputs.version }}" -n "**Full Changelog**: https://github.com/vda-lab/pyflasc/commits/${{ steps.version.outputs.tag }}" "${{ steps.version.outputs.tag }}" dist/*.whl dist/*.tar.gz
+          gh release create -R vda-lab/multi_mst -t "Version ${{ steps.version.outputs.version }}" -n "**Full Changelog**: https://github.com/vda-lab/multi_mst/commits/${{ steps.version.outputs.tag }}" "${{ steps.version.outputs.tag }}" dist/*.whl dist/*.tar.gz
         
       - name: Publish package to (Test)PyPI
         uses: pypa/gh-action-pypi-publish@v1.8.5
