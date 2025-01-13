@@ -1,3 +1,8 @@
-numpy>=1.21
-numba>=0.56
-scikit-learn>=1.1
+numpy >= 1.20, <3
+scipy >= 1.9
+scikit-learn >= 1.1
+umap-learn >= 0.5.4
+numba >= 0.57.1
+pynndescent >= 0.5.13
+fast_hdbscan
+fast_hbcc
