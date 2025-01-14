@@ -1,103 +1,242 @@
-.. fast_hdbscan documentation master file, created by
-   sphinx-quickstart on Wed Feb 22 18:39:23 2023.
-   You can adapt this file completely to your liking, but it should at least
-   contain the root `toctree` directive.
+.. multi_mst documentation master file.
 
-.. image:: hdbscan_logo.png
-  :width: 600
-  :alt: HDBSCAN logo
-  :align: center
+.. toctree::
+   :maxdepth: 1
+   :hidden:
 
-======================
-Fast Multicore HDBSCAN
-======================
+   examples
+   api_reference
 
-The ``fast_hdbscan`` library provides a simple implementation of the HDBSCAN clustering algorithm designed specifically
-for high performance on multicore machine with low dimensional data. The algorithm runs in parallel and can make
-effective use of as many cores as you wish to throw at a problem. It is thus ideal for large SMP systems, and even
-modern multicore laptops.
+==============================================
+Manifold Modelling with Minimum Spanning Trees
+==============================================
 
-This library provides a
-re-implementation of a subset of the HDBSCAN algorithm that is compatible with the
-`hdbscan <https://github.com/scikit-learn-contrib/hdbscan>`_ library for data that is Euclidean and
-low dimensional. The primary advantages of this library over the standard ``hdbscan`` library are:
+Dimensionality reduction (DR) algorithms typically assume the data they are
+given is uniformly sampled from some underlying manifold. When this is not the
+case, and there are observation-gaps along the manifold, these algorithms may
+fail to detect a single connected component. This repository presents two
+manifold approximation approaches for non-uniform sampled data that always
+construct a single connected component by building upon minimum spanning trees
+(MST).
 
- * this library can easily use all available cores to speed up computation;
- * this library has much faster implementations of tree condensing and cluster extraction;
- * this library is much simpler and more approachable for extending or using components from;
- * this library is built on numba and has less issues with binaries and compilation.
+Their main use-case is as input to dimensionality reduction algorithms for data
+visualization. This repository supports UMAP, where our manifold models improve
+projection and visualization quality at low number of neighbors. Additionally,
+our fast (approximate) minimum spanning tree construction algorithms can be used
+to speed up HDBSCAN (and other hierarchical) clustering.
 
-This library does not support all the features and input formats available in the hdbscan library.
+---------------------------------
+Noisy Minimum Spanning Tree Union
+---------------------------------
 
------------
-Basic Usage
------------
+The noisy minimum spanning tree union (n-MST) is inspired by Pathfinder
+networks that, with a specific parameter selection, yield the union set of all
+possible MSTs in a network (see, e.g., [`1`_], [`2`_]). We compute noisy MSTs to
+detect alternative connectivity at all distance scales for distances which may
+have few identically weighted connections.
 
-The ``fast_hdbscan`` library follows the ``hdbscan`` library in using the sklearn API. You can use the ``fast_hdbscan``
-class ``HDBSCAN`` exactly as you wuld that of the ``hdbscan`` library with the caveat that ``fast_hdbscan`` only
-supports a subset of the parameters and options of ``hdbscan``. Nonetheless, if you have low-dimensional
-Euclidean data (e.g. the output of UMAP), you can use this library as a straightforward drop in replacement for
-``hdbscan``:
+We add Gaussian noise (mean=0) to every candidate edge. The noise parameter n
+is specified as a fraction of the points' nearest neighbor distance and
+controls the Gaussian's standard deviation. This formulation makes the noise
+scale with the data's density to avoid adding more edges in dense regions than
+sparse regions, retaining a reasonably uniform manifold approximation graph.
 
 .. code:: python
 
-    import fast_hdbscan
-    from sklearn.datasets import make_blobs
+    import matplotlib.pyplot as plt
+    import matplotlib.collections as mc
+    from sklearn.datasets import make_swiss_roll
+    from multi_mst import NoisyMST
 
-    data, _ = make_blobs(1000)
+    X, t = make_swiss_roll(n_samples=2000, noise=0.5, hole=True)
+    model = NoisyMST(num_neighbors=10, noise_fraction=1.0).fit(X)
+    projector = model.umap(repulsion_strength=1.0)
 
-    clusterer = fast_hdbscan.HDBSCAN(min_cluster_size=10)
-    cluster_labels = clusterer.fit_predict(data)
+    # Drawing the network
+    xs = projector.embedding_[:, 0]
+    ys = projector.embedding_[:, 1]
+    coo_matrix = projector.graph_.tocoo()
+    sources = coo_matrix.row
+    targets = coo_matrix.col
 
-------------
-Installation
-------------
-fast_hdbscan requires:
+    plt.figure(figsize=(4, 3))
+    plt.scatter(xs, ys, c=t, s=1, edgecolors="none", linewidth=0, cmap="viridis")
+    lc = mc.LineCollection(
+        list(zip(zip(xs[sources], ys[sources]), zip(xs[targets], ys[targets]))),
+        linewidth=0.2,
+        zorder=-1,
+        alpha=0.5,
+        color="k",
+    )
+    ax = plt.gca()
+    ax.add_collection(lc)
+    ax.set_aspect("equal")
+    plt.subplots_adjust(0, 0, 1, 1)
+    plt.axis("off")
+    plt.show()
 
- * numba
- * numpy
- * scikit-learn
+.. figure:: _static/noisy_mst.png
 
-fast_hdbscan can be installed via pip:
+
+---------------------------------
+k-Nearest Minimum Spanning Tree 
+---------------------------------
+
+The k-nearest Minimum Spanning Tree ($k$-MST) generalizes $k$-nearest neighbor
+networks ($k$-NN) to minimum spanning trees. It adds the $k$ shortest edges
+between components. Since data points start as distinct components, all $k$-NN
+edges are included in the kMST. This approach is faster than the noisy minimum
+spanning tree union because it runs the Boruvka algorithm only once.
+
+To avoid creating shortcuts in the manifold, a distance threshold $\\epsilon$ can
+be applied. The parameter is specified as a fraction of the shortest edge
+between components and provides an upper distance limit for the $2$-to-$k$
+alternative edges.
+
+.. code:: python
+
+    import matplotlib.pyplot as plt
+    import matplotlib.collections as mc
+    from sklearn.datasets import make_swiss_roll
+    from multi_mst import KMST
+
+    X, t = make_swiss_roll(n_samples=2000, noise=0.5, hole=True)
+    model = KMST(num_neighbors=3, epsilon=2.0).fit(X)
+    projector = model.umap(repulsion_strength=1.0)
+
+    # Drawing the network
+    xs = projector.embedding_[:, 0]
+    ys = projector.embedding_[:, 1]
+    coo_matrix = projector.graph_.tocoo()
+    sources = coo_matrix.row
+    targets = coo_matrix.col
+
+    plt.figure(figsize=(4, 3))
+    plt.scatter(xs, ys, c=t, s=1, edgecolors="none", linewidth=0, cmap="viridis")
+    lc = mc.LineCollection(
+        list(zip(zip(xs[sources], ys[sources]), zip(xs[targets], ys[targets]))),
+        linewidth=0.2,
+        zorder=-1,
+        alpha=0.5,
+        color="k",
+    )
+    ax = plt.gca()
+    ax.add_collection(lc)
+    ax.set_aspect("equal")
+    plt.subplots_adjust(0, 0, 1, 1)
+    plt.axis("off")
+    plt.show()
+
+.. figure:: _static/k_mst.png
+
+
+-------------------
+Approximate k-MST
+-------------------
+
+Computing $k$-MSTs using KDTrees can be expensive on some datasets. We provide a
+version of the algorithm based on Nearest Neighbor Descent for quicker
+approximations. We combined Boruvka's algorithm with NNDescent to find neighbors
+that are not already connected in the MST being build. This variant supports all
+distance metrics implemented in `pynndescent`. Combined with `fast_hdbscan`'s
+cluster selection, it can greatly speed up computing (approximate) clusters on
+high dimensional data-sets!
+
+
+.. code:: python
+
+    import matplotlib.pyplot as plt
+    import matplotlib.collections as mc
+    from sklearn.datasets import make_swiss_roll
+    from multi_mst import KMSTDescent
+
+    X, t = make_swiss_roll(n_samples=2000, noise=0.5, hole=True)
+    model = KMSTDescent(num_neighbors=3, epsilon=2.0).fit(X)
+    projector = model.umap(repulsion_strength=1.0)
+
+    # Draw the network
+    xs = projector.embedding_[:, 0]
+    ys = projector.embedding_[:, 1]
+    coo_matrix = projector.graph_.tocoo()
+    sources = coo_matrix.row
+    targets = coo_matrix.col
+
+    plt.figure(figsize=(4, 3))
+    plt.scatter(xs, ys, c=t, s=1, edgecolors="none", linewidth=0, cmap="viridis")
+    lc = mc.LineCollection(
+        list(zip(zip(xs[sources], ys[sources]), zip(xs[targets], ys[targets]))),
+        linewidth=0.2,
+        zorder=-1,
+        alpha=0.5,
+        color="k",
+    )
+    ax = plt.gca()
+    ax.add_collection(lc)
+    ax.set_aspect("equal")
+    plt.subplots_adjust(0, 0, 1, 1)
+    plt.axis("off")
+    plt.show()
+
+.. figure:: _static/k_mst_descent.png
+
+---------------
+Supported Tasks
+---------------
+
+All three classes support several downstream tasks.
+
+.. code:: python
+
+    # HDBSCAN or HBCC clusters
+    # - Creates a fitted HDBSCAN or HBCC model from the computed manifold graph.
+    # - Computes mutual-reachability from the model's number of neighbors.
+    clusterer = model.hdbscan(cluster_selection_method='leaf') # or
+    clusterer = model.hbcc(cluster_selection_method='leaf')
+
+    # Sub-cluster detectors
+    # - Ensures parameter and distance metric combinations are valid!
+    branch_detector = model.branch_detector(clusterer, min_cluster_size=5)
+    bc_detector = model.boundary_cluster_detector(clusterer, min_cluster_size=5)
+
+    # Accessors for the manifold graph
+    # - Mutual-reachability computed from the model's number of neighbors.
+    model.graph_                       # CSR format, rows sorted by distance
+    model.mutual_reachability_graph_   # CSR format, rows sorted by mutual reachability
+    model.minimum_spanning_tree_       # Edgelist, unsorted 
+    model.mutual_reachability_tree_    # Edgelist, unsorted
+    model.knn_neighbors_               # Adjacency lists for k-NN sorted by distance
+    model.knn_distances_               # Adjacency lists for k-NN sorted by distance
+    model.graph_neighbors_             # Adjacency lists for graph sorted by distance, -1 = missing
+    model.graph_distances_             # Adjacency lists for graph sorted by distance, inf = missing
+
+The demonstration notebooks in `./notebooks` provide more elaborate examples.
+
+-------------------------
+Installation Instructions
+-------------------------
+
+The `multi_mst` package can be installed from pypi:
 
 .. code:: bash
 
-    pip install fast_hdbscan
+    pip install multi_mst
 
+----------------
+Acknowledgements
+----------------
 
-----------
-User Guide
-----------
+Most code---including the numba KDTree, disjoint set and boruvka MST
+construction implementation---is adapted from `fast_hdbscan`_. The NNDescent
+implementation is adapted from `pynndescent`_.
 
-.. toctree::
-   :maxdepth: 2
-   :caption: Contents:
+-------
+License
+-------
 
-   basic_usage
-   benchmarks
-   comparable_clusterings
-   detecting_branches
-   for_developers
+`multi_mst` uses the same license as `fast_hdbscan`: BSD (2-clause). See the
+LICENSE file for details.
 
-
-----------
-References
-----------
-
-The algorithm used here is an adaptation of the algorithms described in the papers:
-
-    McInnes L, Healy J. *Accelerated Hierarchical Density Based Clustering*
-    In: 2017 IEEE International Conference on Data Mining Workshops (ICDMW), IEEE, pp 33-42.
-    2017 `[pdf] <http://ieeexplore.ieee.org/stamp/stamp.jsp?tp=&arnumber=8215642>`_
-
-    R. Campello, D. Moulavi, and J. Sander, *Density-Based Clustering Based on
-    Hierarchical Density Estimates*
-    In: Advances in Knowledge Discovery and Data Mining, Springer, pp 160-172.
-    2013
-
-Indices and tables
-==================
-
-* :ref:`genindex`
-* :ref:`modindex`
-* :ref:`search`
+.. _1: https://onlinelibrary.wiley.com/doi/10.1002/asi.20904
+.. _2: https://ieeexplore.ieee.org/document/8231853
+.. _fast_hdbscan: https://github.com/TutteInstitute/fast_hdbscan
+.. _pynndescent: https://github.com/lmcinnes/pynndescent

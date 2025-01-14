@@ -12,6 +12,7 @@
 #
 import os
 import sys
+import matplotlib.pyplot
 
 sys.path.insert(0, os.path.abspath(".."))
 sys.path.insert(0, os.path.abspath("."))
@@ -19,12 +20,12 @@ sys.path.insert(0, os.path.abspath("."))
 
 # -- Project information -----------------------------------------------------
 
-project = 'fast_hdbscan'
-copyright = '2023, Leland McInnes'
-author = 'Leland McInnes'
+project = 'multi_mst'
+copyright = '2025, Jelmer Bot'
+author = 'Jelmer Bot'
 
 # The full version, including alpha/beta/rc tags
-release = '0.1'
+release = '0.2.0'
 
 
 master_doc = "index"
@@ -71,9 +72,8 @@ html_theme = "sphinx_rtd_theme"
 # further.  For a list of options available for each theme, see the
 # documentation.
 #
-html_theme_options = {"navigation_depth": 3, "logo_only": True}
-
-html_logo = "hdbscan_logo_rtd.png"
+# html_theme_options = {"navigation_depth": 3, "logo_only": True}
+# html_logo = "hdbscan_logo_rtd.png"
 
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
@@ -84,5 +84,7 @@ html_static_path = ['_static']
 intersphinx_mapping = {
     "python": ("https://docs.python.org/{.major}".format(sys.version_info), None),
     "numpy": ("https://docs.scipy.org/doc/numpy/", None),
-    "scikit-learn": ("https://scikit-learn.org/", None),
+    "scikit-learn": ("https://scikit-learn.org/stable/modules/classes.html", None),
 }
+
+templates_path = ["_templates"]

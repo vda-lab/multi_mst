@@ -1,0 +1,8 @@
+include README.md
+include pyproject.toml
+include LICENSE
+include MANIFEST.in
+include requirements.txt
+recursive-include doc *
+recursive-exclude doc/_build *
+recursive-exclude notebooks *
