@@ -1,3 +1,60 @@
 [build-system]
-requires = ["setuptools >= 40.6.0", "wheel"]
+requires = ["setuptools"]
 build-backend = "setuptools.build_meta"
+
+[project]
+name = "multi_mst"
+version = "0.2.0"
+description = "Minimum spanning tree based manifold approximations."
+keywords = ["dimensionality reduction", "clustering", "minimum spanning tree"]
+authors = [
+  {name= "Jelmer Bot", email = "jelmer.bot@uhasselt.be" }
+]
+readme = "README.md"
+license = { text = "BSD-2-Clause" }
+classifiers = [
+    "Development Status :: 5 - Production/Stable", 
+    "License :: OSI Approved :: BSD License",
+    "Natural Language :: English",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3 :: Only"
+]
+requires-python = ">=3.10"
+dependencies = [
+    "numpy >= 1.20, <3",
+    "scipy >= 1.9",
+    "scikit-learn >= 1.1",
+    "umap-learn >= 0.5.4",
+    "numba >= 0.57.1",
+    "pynndescent >= 0.5.13",
+    "fast_hdbscan @ git+https://github.com/TutteInstitute/fast_hdbscan.git@main#egg=fast_hdbscan",
+    "fast_hbcc @ git+https://github.com/vda-lab/fast_hbcc.git@main#egg=fast_hbcc"
+]
+
+[project.urls]
+Homepage = "https://github.com/vda-lab/multi_mst"
+Issues = "https://github.com/vda-lab/multi_mst/issues"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["multi_mst*"]
+namespaces = false
+
+[project.optional-dependencies]
+tests = ["pytest"]
+docs = [
+	"sphinx >= 8",
+	"nbsphinx >= 0.9",
+	"sphinx_rtd_theme >= 2.0",
+	"matplotlib >= 3.8",
+  "numpydoc",
+  "pygments>=2.4.1",
+  "jupyterlab_pygments>=0.1.1",
+  "ipykernel",
+]
+notebooks = [
+  "jupyterlab >= 4",
+  "matplotlib >= 3.8",
+  "pandas >= 2.2",
+  "tqdm >= 4.62.3"
+]
