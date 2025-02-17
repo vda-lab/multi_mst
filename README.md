@@ -68,7 +68,7 @@ plt.subplots_adjust(0, 0, 1, 1)
 plt.axis("off")
 plt.show()
 ```
-![noisy_mst](./doc/_static/noisy_mst.png)
+![noisy_mst](./docs/_static/noisy_mst.png)
 
 $k$-Nearest Minimum Spanning Tree 
 ---------------------------------
@@ -117,7 +117,7 @@ plt.subplots_adjust(0, 0, 1, 1)
 plt.axis("off")
 plt.show()
 ```
-![k_mst](./doc/_static/k_mst.png)
+![k_mst](./docs/_static/k_mst.png)
 
 
 Approximate $k$-MST
@@ -165,7 +165,7 @@ plt.subplots_adjust(0, 0, 1, 1)
 plt.axis("off")
 plt.show()
 ```
-![k_mst](./doc/_static/k_mst_descent.png)
+![k_mst](./docs/_static/k_mst_descent.png)
 
 
 Supported Tasks
