@@ -27,8 +27,8 @@ dependencies = [
     "umap-learn >= 0.5.4",
     "numba >= 0.57.1",
     "pynndescent >= 0.5.13",
-    "fast_hdbscan @ git+https://github.com/TutteInstitute/fast_hdbscan.git@main#egg=fast_hdbscan",
-    "fast_hbcc @ git+https://github.com/vda-lab/fast_hbcc.git@main#egg=fast_hbcc"
+    "fast_hdbscan >= 0.2.1",
+    "fast-hbcc >= 0.1.0"
 ]
 
 [project.urls]
