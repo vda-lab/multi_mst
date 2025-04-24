@@ -212,7 +212,7 @@ class MultiMSTMixin:
         output_dens: bool = False,
         disconnection_distance: float | None = None,
     ):
-        """Constructs and fits a UMAP model to the kMST graph.
+        """Constructs and fits a UMAP model [1]_ to the kMST graph.
 
         Unlike HDBSCAN and HBCC, UMAP does not support infinite data. To ensure
         all UMAP's member functions work as expected, the UMAP model is NOT
@@ -403,11 +403,16 @@ class MultiMSTMixin:
             set of other points.  Too many such points will artificially connect
             your space.
 
-
         Returns
         -------
         umap : UMAP
             The fitted UMAP model.
+
+        References
+        ----------
+        .. [1] McInnes, L., Healy, J. and Melville, J., 2018. Umap: Uniform
+            manifold approximation and projection for dimension reduction. arXiv
+            preprint arXiv:1802.03426.
         """
         check_is_fitted(
             self,
@@ -479,7 +484,7 @@ class MultiMSTMixin:
         cluster_selection_persistence: float = 0.0,
         ss_algorithm: Literal["bc", "bc_simple"] = "bc",
     ):
-        """Constructs and fits an HDBSCAN model to the kMST graph.
+        """Constructs and fits an HDBSCAN [1]_ model to the kMST graph.
 
         Parameters
         ----------
@@ -527,6 +532,13 @@ class MultiMSTMixin:
         -------
         clusterer : HDBSCAN
             The fitted HDBSCAN model.
+
+        References
+        ----------
+        .. [1] McInnes L., Healy J. 2017. Accelerated Hierarchical Density Based
+        Clustering. IEEE International Conference on Data Mining Workshops
+        (ICDMW), pp 33-42.
+        http://ieeexplore.ieee.org/stamp/stamp.jsp?tp=&arnumber=8215642.
         """
         check_is_fitted(
             self,
@@ -810,8 +822,8 @@ class MultiMSTMixin:
         cluster_selection_persistence: float = 0.0,
         propagate_labels: bool = False,
     ):
-        """Constructs and fits a metric-aware BranchDetector, ensuring valid
-        parameter--metric combinations.
+        """Constructs and fits a metric-aware BranchDetector [1]_, ensuring 
+        valid parameter--metric combinations.
 
         Parameters
         ----------
@@ -874,6 +886,12 @@ class MultiMSTMixin:
         -------
         clusterer : BranchDetector
             A fitted BranchDetector.
+
+        References
+        ----------
+        .. [1] Bot D.M., Peeters J., Liesenborgs J., Aerts J. 2025. FLASC: a
+        flare-sensitive clustering algorithm. PeerJ Computer Science 11:e2792
+        https://doi.org/10.7717/peerj-cs.2792.
         """
 
         return BranchDetector(
