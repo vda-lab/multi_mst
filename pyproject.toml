@@ -7,28 +7,26 @@ name = "multi_mst"
 version = "0.2.0"
 description = "Minimum spanning tree based manifold approximations."
 keywords = ["dimensionality reduction", "clustering", "minimum spanning tree"]
-authors = [
-  {name= "Jelmer Bot", email = "jelmer.bot@uhasselt.be" }
-]
+authors = [{ name = "Jelmer Bot", email = "jelmer.bot@uhasselt.be" }]
 readme = "README.md"
-license = { text = "BSD-2-Clause" }
+license = "BSD-2-Clause"
+license-files = ["LICENSE"]
 classifiers = [
-    "Development Status :: 5 - Production/Stable", 
-    "License :: OSI Approved :: BSD License",
-    "Natural Language :: English",
-    "Operating System :: OS Independent",
-    "Programming Language :: Python :: 3 :: Only"
+  "Development Status :: 5 - Production/Stable",
+  "Natural Language :: English",
+  "Operating System :: OS Independent",
+  "Programming Language :: Python :: 3 :: Only",
 ]
 requires-python = ">=3.10"
 dependencies = [
-    "numpy >= 1.20, <3",
-    "scipy >= 1.9",
-    "scikit-learn >= 1.1",
-    "umap-learn >= 0.5.4",
-    "numba >= 0.57.1",
-    "pynndescent >= 0.5.13",
-    "fast_hdbscan >= 0.2.1",
-    "fast-hbcc >= 0.1.0"
+  "numpy >= 1.20, <3",
+  "scipy >= 1.9",
+  "scikit-learn >= 1.6",
+  "umap-learn >= 0.5.4",
+  "numba >= 0.57.1",
+  "pynndescent >= 0.5.13",
+  "fast_hdbscan >= 0.2.1",
+  "fast-hbcc >= 0.1.0",
 ]
 
 [project.urls]
@@ -43,10 +41,10 @@ namespaces = false
 [project.optional-dependencies]
 tests = ["pytest"]
 docs = [
-	"sphinx >= 8",
-	"nbsphinx >= 0.9",
-	"sphinx_rtd_theme >= 2.0",
-	"matplotlib >= 3.8",
+  "sphinx >= 8",
+  "nbsphinx >= 0.9",
+  "sphinx_rtd_theme >= 2.0",
+  "matplotlib >= 3.8",
   "numpydoc",
   "pygments>=2.4.1",
   "jupyterlab_pygments>=0.1.1",
@@ -56,5 +54,5 @@ notebooks = [
   "jupyterlab >= 4",
   "matplotlib >= 3.8",
   "pandas >= 2.2",
-  "tqdm >= 4.62.3"
+  "tqdm >= 4.62.3",
 ]

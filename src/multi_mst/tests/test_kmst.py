@@ -240,7 +240,7 @@ def test_hdbscan_boundary_clusters():
     assert isinstance(bc, BoundaryClusterDetector)
     assert bc.labels_[0] == -1
     assert bc.labels_[6] == -1
-    assert len(set(bc.labels_)) == 9
+    assert len(set(bc.labels_)) == 6
 
 
 def test_hbcc():

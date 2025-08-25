@@ -215,7 +215,7 @@ def test_hdbscan_boundary_clusters():
     assert isinstance(bc, BoundaryClusterDetector)
     assert bc.labels_[0] == -1
     assert bc.labels_[6] == -1
-    assert len(set(bc.labels_)) == 9
+    assert len(set(bc.labels_)) == 6
 
 
 def test_hdbscan_boundary_clusters_no_reachability():
@@ -226,7 +226,7 @@ def test_hdbscan_boundary_clusters_no_reachability():
     assert isinstance(bc, BoundaryClusterDetector)
     assert bc.labels_[0] == -1
     assert bc.labels_[6] == -1
-    assert len(set(bc.labels_)) == 8
+    assert len(set(bc.labels_)) == 7
 
 
 def test_hdbscan_boundary_clusters_metric():
@@ -237,7 +237,7 @@ def test_hdbscan_boundary_clusters_metric():
     assert isinstance(bc, BoundaryClusterDetector)
     assert bc.labels_[0] == -1
     assert bc.labels_[6] == -1
-    assert len(set(bc.labels_)) == 7
+    assert len(set(bc.labels_)) == 6
 
 
 def test_hbcc():

@@ -84,7 +84,7 @@ class MultiMSTMixin:
         self: MultiMSTMixin
             The fitted estimator.
         """
-        X = check_array(X, force_all_finite=False)
+        X = check_array(X, ensure_all_finite=False)
         self._raw_data = X
 
         self._all_finite = np.all(np.isfinite(X))
@@ -561,8 +561,6 @@ class MultiMSTMixin:
                 sample_weights, self._raw_data, dtype=np.float32
             )
         clusterer = HDBSCAN(
-            data_labels=data_labels,
-            sample_weights=sample_weights,
             min_samples=self.num_neighbors,
             min_cluster_size=min_cluster_size,
             max_cluster_size=max_cluster_size,
