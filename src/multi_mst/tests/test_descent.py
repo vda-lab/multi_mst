@@ -6,6 +6,7 @@ from sklearn.datasets import make_blobs
 from sklearn.preprocessing import StandardScaler
 
 from umap import UMAP
+from sklearn.manifold import TSNE
 from fast_hbcc import HBCC, BoundaryClusterDetector
 from fast_hdbscan import HDBSCAN
 from multi_mst import kMSTDescent, KMSTDescent
@@ -136,6 +137,14 @@ def test_umap():
 
     assert isinstance(umap, UMAP)
     assert umap.embedding_.shape == (X_missing_data.shape[0] - 2, 2)
+
+
+def test_tsne():
+    model = KMSTDescent().fit(X_missing_data)
+    tsne = model.tsne()
+
+    assert isinstance(tsne, TSNE)
+    assert tsne.embedding_.shape == (X_missing_data.shape[0] - 2, 2)
 
 
 def test_hdbscan():

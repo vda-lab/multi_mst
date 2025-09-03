@@ -1,10 +1,20 @@
+import math
+import numba
 import numpy as np
 import warnings as warn
 from typing import Literal, Any, Callable
 
-from scipy.sparse import csr_array
+from time import time
+from numpy.random import RandomState
+from scipy.sparse import csr_array, spmatrix
 from sklearn.utils import check_array
-from sklearn.utils.validation import check_is_fitted, _check_sample_weight
+from sklearn.decomposition import PCA
+from sklearn.manifold._t_sne import TSNE, _joint_probabilities_nn
+from sklearn.utils.validation import (
+    check_is_fitted,
+    _check_sample_weight,
+    check_random_state,
+)
 
 from umap import UMAP
 from fast_hbcc.sub_clusters import BoundaryClusterDetector
@@ -229,18 +239,6 @@ class MultiMSTMixin:
             provide easy visualization, but can reasonably be set to any integer
             value in the range 2 to 100.
 
-        metric: string or function (optional, default 'euclidean')
-            The metric to use to compute distances in output dimensional space.
-            If a string is passed it must match a valid predefined metric, see
-            UMAP's documentation for available options. If a general metric is
-            required a function that takes two 1d arrays and returns a float can
-            be provided. For performance purposes it is required that this be a
-            numba jit'd function.
-
-        metric_kwds: dict (optional, default None)
-            Keyword arguments to pass on to the metric, such as the ``p`` value
-            of Minkowski distance. If None then no arguments are passed on.
-
         n_epochs: int (optional, default None)
             The number of training epochs to be used in optimizing the low
             dimensional embedding. Larger values result in more accurate
@@ -434,11 +432,13 @@ class MultiMSTMixin:
                 message=".*is not an NNDescent object.*",
             )
             umap = UMAP(
+                n_components=n_components,
                 n_neighbors=self.graph_neighbors_.shape[1],
+                metric=self.metric,
+                metric_kwds=self.metric_kwds,
                 precomputed_knn=csr_to_neighbor_list(
                     self._graph.data, self._graph.indices, self._graph.indptr
                 ),
-                n_components=n_components,
                 output_metric=output_metric,
                 output_metric_kwds=output_metric_kwds,
                 n_epochs=n_epochs,
@@ -470,6 +470,173 @@ class MultiMSTMixin:
             ).fit(data)
 
         return umap
+
+    def tsne(
+        self,
+        *,
+        n_components: int = 2,
+        init: np.ndarray | spmatrix | Literal["random", "pca"] = "pca",
+        learning_rate: float | Literal["auto"] = "auto",
+        early_exaggeration: float = 12.0,
+        min_grad_norm: float = 1e-7,
+        max_iter: int = 1000,
+        n_iter_without_progress: int = 300,
+        method: Literal["barnes_hut", "exact"] = "barnes_hut",
+        angle: float = 0.5,
+        random_state: RandomState | int | None = None,
+        verbose: int = 0,
+    ):
+        """Constructs and fits a TSNE model [1]_ to the kMST graph.
+
+         Unlike HDBSCAN and HBCC, TSNE does not support infinite data. To ensure
+         all TSNE's member functions work as expected, the TSNE model is NOT
+         remapped to the infinite data after fitting. As a result, combining TSNE
+         and HDBSCAN results need to consider the finite index: ```
+             plt.scatter(*tsne.embedding_.T,
+             c=hdbscan.labels_[multi_mst.finite_index])
+         ```
+
+         Parameters
+         ----------
+         n_components : int, default=2
+             Dimension of the embedded space.
+
+         init : {"random", "pca"} or array of shape (n_samples, n_components), default="pca"
+             Initialization of embedding.
+
+         learning_rate : float or "auto", default="auto"
+             The learning rate for t-SNE is usually in the range [10.0, 1000.0].
+             If the learning rate is too high, the data may look like a 'ball'
+             with any point approximately equidistant from its nearest neighbors.
+             If the learning rate is too low, most points may look compressed in
+             a dense cloud with few outliers. If the cost function gets stuck in
+             a bad local minimum increasing the learning rate may help.
+
+         early_exaggeration : float, default=12.0
+             Controls how tight natural clusters in the original space are in the
+             embedded space and how much space will be between them. For larger
+             values, the space between natural clusters will be larger in the
+             embedded space. The choice of this parameter is not very critical.
+             If the cost function increases during initial optimization, the
+             early exaggeration factor or the learning rate might be too high.
+
+         min_grad_norm : float, default=1e-7
+             If the gradient norm is below this threshold, the optimization will
+             be stopped.
+
+         max_iter : int, default=1000
+             Maximum number of iterations for the optimization. Should be at
+             least 250.
+
+        n_iter_without_progress : int, default=300
+             Maximum number of iterations without progress before we abort the
+             optimization, used after 250 initial iterations with early
+             exaggeration. Note that progress is only checked every 50 iterations
+             so this value is rounded to the next multiple of 50.
+
+        method : {'barnes_hut', 'exact'}, default='barnes_hut'
+            By default the gradient calculation algorithm uses Barnes-Hut
+            approximation running in O(NlogN) time. method='exact'
+            will run on the slower, but exact, algorithm in O(N^2) time. The
+            exact algorithm should be used when nearest-neighbor errors need
+            to be better than 3%. However, the exact method cannot scale to
+            millions of examples.
+
+         angle : float, default=0.5
+             This is the trade-off between speed and accuracy for Barnes-Hut
+             T-SNE. 'angle' is the angular size of a distant node as measured
+             from a point. If this size is below 'angle' then it is used as a
+             summary node of all points contained within it. This method is not
+             very sensitive to changes in this parameter in the range of 0.2 -
+             0.8. Angle less than 0.2 has quickly increasing computation time and
+             angle greater 0.8 has quickly increasing error.
+
+         random_state : int, RandomState instance or None, default=None
+             Determines the random number generator. Pass an int for reproducible
+             results across multiple function calls. Note that different
+             initializations might result in different local minima of the cost
+             function.
+
+         verbose : int, default=0
+             Verbosity level.
+
+         Returns
+         -------
+         tsne : TSNE
+             The fitted TSNE model.
+
+         References
+         ----------
+         .. [1] van der Maaten, L., & Hinton, G. (2008). Visualizing data using
+         t-SNE. Journal of Machine Learning Research.
+        """
+        check_is_fitted(
+            self,
+            ["_graph", "_raw_data"],
+            msg="You first need to fit the estimator before accessing member functions.",
+        )
+        if method == "barnes_hut" and n_components > 3:
+            raise ValueError(
+                "'n_components' should be inferior to 4 for the "
+                "barnes_hut algorithm as it relies on "
+                "quad-tree or oct-tree."
+            )
+
+        # Extract raw data
+        X = self._raw_data
+        if not self._all_finite:
+            X = self._raw_data[self.finite_index]
+        X = X.astype(np.float32, copy=False)
+
+        # Build the t-SNE model
+        n_samples = self._graph.shape[0]
+        random_state = check_random_state(random_state)
+        tsne = TSNE(
+            method=method,
+            metric=self.metric,
+            metric_params=self.metric_kwds,
+            n_components=n_components,
+            init=init,
+            learning_rate=learning_rate,
+            early_exaggeration=early_exaggeration,
+            min_grad_norm=min_grad_norm,
+            max_iter=max_iter,
+            n_iter_without_progress=n_iter_without_progress,
+            angle=angle,
+            random_state=random_state,
+            verbose=verbose,
+        )
+
+        # Configure parameters set in fit
+        if learning_rate == "auto":
+            tsne.learning_rate_ = X.shape[0] / tsne.early_exaggeration / 4
+            tsne.learning_rate_ = np.maximum(tsne.learning_rate_, 50)
+        else:
+            tsne.learning_rate_ = tsne.learning_rate
+
+        # Do the initialization
+        if isinstance(init, np.ndarray):
+            X_embedded = init
+        elif init == "pca":
+            pca = PCA(
+                n_components=n_components,
+                svd_solver="randomized",
+                random_state=random_state,
+            )
+            pca.set_output(transform="default")
+            X_embedded = pca.fit_transform(X).astype(np.float32, copy=False)
+            X_embedded = X_embedded / np.std(X_embedded[:, 0]) * 1e-4
+        elif init == "random":
+            X_embedded = 1e-4 * random_state.standard_normal(
+                size=(n_samples, n_components)
+            ).astype(np.float32)
+
+        # Fit tSNE optimizer (run on csr matrix)
+        tsne.graph_, tsne.perplexity = _joint_probabilities_csr(self._graph, verbose)
+        tsne.embedding_ = tsne._tsne(
+            tsne.graph_, max(n_components - 1, 1), n_samples, X_embedded=X_embedded
+        )
+        return tsne
 
     def hdbscan(
         self,
@@ -820,7 +987,7 @@ class MultiMSTMixin:
         cluster_selection_persistence: float = 0.0,
         propagate_labels: bool = False,
     ):
-        """Constructs and fits a metric-aware BranchDetector [1]_, ensuring 
+        """Constructs and fits a metric-aware BranchDetector [1]_, ensuring
         valid parameter--metric combinations.
 
         Parameters
@@ -1115,3 +1282,86 @@ def remap_hbcc(clusterer, finite_index, internal_to_raw, num_points):
     new_bc = np.zeros(num_points)
     new_bc[finite_index] = clusterer.boundary_coefficient_
     clusterer.boundary_coefficient_ = new_bc
+
+
+@numba.njit()
+def _binary_search_perplexity_csr(dists, indptr):
+    INFINITY = np.inf
+    EPSILON_DBL = 1e-8
+    PERPLEXITY_TOLERANCE = 1e-5
+    n_steps = 100
+    desired_perplexity = (np.diff(indptr).max() - 1) / 3
+    desired_entropy = math.log(desired_perplexity)
+
+    probs = np.empty_like(dists)
+    for start, end in zip(indptr[:-1], indptr[1:]):
+        beta_min = -INFINITY
+        beta_max = INFINITY
+        beta = 1.0
+
+        # Binary search for beta to achieve desired perplexity
+        for _ in range(n_steps):
+            # Convert distances to similarities
+            sum_Pi = 0.0
+            for idx in range(start, end):
+                probs[idx] = math.exp(-dists[idx] * beta)
+                sum_Pi += probs[idx]
+
+            if sum_Pi == 0.0:
+                sum_Pi = EPSILON_DBL
+
+            # Normalize the probabilities
+            sum_disti_Pi = 0.0
+            for idx in range(start, end):
+                probs[idx] /= sum_Pi
+                sum_disti_Pi += dists[idx] * probs[idx]
+
+            # Compute the resulting entropy
+            entropy = math.log(sum_Pi) + beta * sum_disti_Pi
+            entropy_diff = entropy - desired_entropy
+            if math.fabs(entropy_diff) <= PERPLEXITY_TOLERANCE:
+                break
+
+            # Update beta values
+            if entropy_diff > 0.0:
+                beta_min = beta
+                if beta_max == INFINITY:
+                    beta *= 2.0
+                else:
+                    beta = (beta + beta_max) / 2.0
+            else:
+                beta_max = beta
+                if beta_min == -INFINITY:
+                    beta /= 2.0
+                else:
+                    beta = (beta + beta_min) / 2.0
+
+    return probs, desired_perplexity
+
+
+def _joint_probabilities_csr(graph, verbose):
+    """Compute joint probabilities p_ij from sparse distances."""
+    t0 = time()
+    # Compute conditional probabilities such that they approximately match
+    # the desired perplexity
+    graph.sort_indices()
+    n_samples = graph.shape[0]
+    conditional_P, perplexity = _binary_search_perplexity_csr(graph.data, graph.indptr)
+    assert np.all(np.isfinite(conditional_P)), "All probabilities should be finite"
+
+    # Symmetrize the joint probability distribution using sparse operations
+    P = csr_array(
+        (conditional_P, graph.indices, graph.indptr),
+        shape=(n_samples, n_samples),
+    )
+    P = P + P.T
+
+    # Normalize the joint probability distribution
+    sum_P = np.maximum(P.sum(), np.finfo(np.double).eps)
+    P /= sum_P
+
+    assert np.all(np.abs(P.data) <= 1.0)
+    if verbose >= 2:
+        duration = time() - t0
+        print("[t-SNE] Computed conditional probabilities in {:.3f}s".format(duration))
+    return P, perplexity
