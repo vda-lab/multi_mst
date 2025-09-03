@@ -860,6 +860,11 @@ class MultiMSTMixin:
         clusterer : HDBSCAN
             The fitted HDBSCAN model.
         """
+        check_is_fitted(
+            self,
+            ["_graph", "_raw_data"],
+            msg="You first need to fit the estimator before accessing member functions.",
+        )
         validate_hdbscan_params(
             self._raw_data.shape[0],
             data_labels=data_labels,
@@ -1185,6 +1190,39 @@ class MultiMSTMixin:
             cluster_selection_epsilon=cluster_selection_epsilon,
             cluster_selection_persistence=cluster_selection_persistence,
         ).fit(clusterer, cluster_labels, cluster_probabilities, sample_weights)
+
+    def graphviz_layout(self, prog="sfdp", **kwargs):
+        """
+        Computes a layout for the graph using Graphviz.
+
+        Requires networkx and (py)graphviz to be installed and accessible on the
+        system path.
+
+        Parameters
+        ----------
+        prog : str
+            The graphviz program to run.
+        **kwargs
+            Additional arguments to `networkx.nx_agraph.graphviz_layout`.
+        
+        Returns
+        -------
+        coords : ndarray of shape (num_points, 2)
+            The coordinates of the nodes in the graph.
+        """
+        check_is_fitted(
+            self,
+            ["_graph"],
+            msg="You first need to fit the estimator before accessing member functions.",
+        )
+        import networkx as nx
+
+        g = nx.Graph(self.graph_)
+        pos = nx.nx_agraph.graphviz_layout(g, prog=prog, **kwargs)
+        coords = np.nan * np.ones((self.graph_.shape[0], 2), dtype=np.float64)
+        for k, v in pos.items():
+            coords[k, :] = v
+        return coords
 
 
 def set_internals(
