@@ -2,8 +2,6 @@
 
 import pytest
 import numpy as np
-from sklearn.datasets import make_blobs
-from sklearn.preprocessing import StandardScaler
 from scipy.sparse.csgraph import connected_components
 from scipy.sparse import coo_array
 
@@ -15,32 +13,7 @@ from multi_mst import kMST, KMST
 from multi_mst.lib import BranchDetector
 
 
-def generate_noisy_data():
-    blobs, yBlobs = make_blobs(
-        n_samples=50,
-        centers=[(-0.75, 2.25), (2.0, -0.5)],
-        cluster_std=0.2,
-        random_state=3,
-    )
-    np.random.seed(5)
-    noise = np.random.uniform(-1.0, 3.0, (50, 2))
-    yNoise = np.full(50, -1)
-    return (
-        np.vstack((blobs, noise)),
-        np.concatenate((yBlobs, yNoise)),
-    )
-
-
-X, y = generate_noisy_data()
-X = StandardScaler().fit_transform(X)
-
-clean_indices = list(range(1, 6)) + list(range(7, X.shape[0]))
-X_missing_data = X.copy()
-X_missing_data[0] = [np.nan, 1]
-X_missing_data[6] = [np.nan, np.nan]
-
-
-def invariants(p):
+def invariants(p, X):
     g = p.graph_
     assert g.shape == (X.shape[0], X.shape[0])
     assert connected_components(g, directed=False, return_labels=False) == 1
@@ -53,7 +26,10 @@ def invariants(p):
     assert connected_components(mrg, directed=False, return_labels=False) == 1
     for point, (start, end) in enumerate(zip(mrg.indptr[:-1], mrg.indptr[1:])):
         assert np.all(mrg.indices[start:end] != point)
-        assert np.all(mrg.data[start:end] >= p.knn_distances_[point, -1])
+        assert np.all(
+            np.isclose(mrg.data[start:end], p.knn_distances_[point, -1])
+            | (mrg.data[start:end] > p.knn_distances_[point, -1])
+        )
 
     mst = p.minimum_spanning_tree_
     mst_g = coo_array(
@@ -91,7 +67,7 @@ def invariants(p):
         )
 
 
-def test_badargs():
+def test_badargs(X):
     """Tests parameter validation."""
     with pytest.raises(ValueError):
         kMST(X, num_neighbors=1.0)
@@ -113,36 +89,36 @@ def test_badargs():
         kMST(X, min_samples=-1)
 
 
-def test_defaults():
+def test_defaults(X):
     """Tests with default parameters."""
     p = KMST().fit(X)
-    invariants(p)
+    invariants(p, X)
 
 
-def test_min_samples():
+def test_min_samples(X):
     """Tests with higher min_samples."""
     p = KMST(min_samples=3).fit(X)
-    invariants(p)
+    invariants(p, X)
 
 
-def test_num_neighbors():
+def test_num_neighbors(X):
     """Tests with lower num_neighbors."""
     p = KMST(num_neighbors=1).fit(X)
-    invariants(p)
+    invariants(p, X)
 
 
-def test_epsilon():
+def test_epsilon(X):
     """Tests with epsilon."""
     base = KMST().fit(X)
     p = KMST(epsilon=1.1).fit(X)
-    invariants(p)
+    invariants(p, X)
     assert p.graph_.nnz < base.graph_.nnz
 
 
-def test_with_missing_data():
+def test_with_missing_data(X_missing, clean_indices):
     """Tests with nan data."""
-    model = KMST().fit(X_missing_data)
-    clean_model = KMST().fit(X_missing_data[clean_indices])
+    model = KMST().fit(X_missing)
+    clean_model = KMST().fit(X_missing[clean_indices])
 
     # No edges to the missing data
     assert np.all(
@@ -166,72 +142,74 @@ def test_with_missing_data():
     )
 
 
-def test_umap():
-    model = KMST().fit(X_missing_data)
+def test_umap(X_missing):
+    model = KMST().fit(X_missing)
     umap = model.umap()
 
     assert isinstance(umap, UMAP)
-    assert umap.embedding_.shape == (X_missing_data.shape[0] - 2, 2)
+    assert umap.embedding_.shape == (X_missing.shape[0] - 2, 2)
 
 
-def test_tsne():
-    model = KMST().fit(X_missing_data)
+def test_tsne(X_missing):
+    model = KMST().fit(X_missing)
     tsne = model.tsne()
 
     assert isinstance(tsne, TSNE)
-    assert tsne.embedding_.shape == (X_missing_data.shape[0] - 2, 2)
+    assert tsne.embedding_.shape == (X_missing.shape[0] - 2, 2)
 
 
-def test_hdbscan():
-    model = KMST().fit(X_missing_data)
+def test_hdbscan(X_missing):
+    model = KMST().fit(X_missing)
     hdbscan = model.hdbscan(min_cluster_size=5)
 
     assert isinstance(hdbscan, HDBSCAN)
     assert hdbscan.min_samples == model.num_neighbors
     assert hdbscan._raw_data is model._raw_data
-    assert hdbscan._raw_data.shape[0] == X_missing_data.shape[0]
+    assert hdbscan._raw_data.shape[0] == X_missing.shape[0]
     assert hdbscan._neighbors is model._knn_neighbors
     assert np.allclose(hdbscan._core_distances, model._knn_distances[:, -1])
-    assert hdbscan.labels_.shape[0] == X_missing_data.shape[0]
+    assert hdbscan.labels_.shape[0] == X_missing.shape[0]
     assert hdbscan.labels_[0] == -1
     assert hdbscan.labels_[6] == -1
     assert len(set(hdbscan.labels_)) == 6
 
 
-def test_hdbscan_min_samples():
-    model = KMST(min_samples=3).fit(X_missing_data)
+def test_hdbscan_min_samples(X_missing):
+    model = KMST(min_samples=3).fit(X_missing)
     hdbscan = model.hdbscan(min_cluster_size=5)
 
     assert isinstance(hdbscan, HDBSCAN)
     assert hdbscan.min_samples == model.num_neighbors
     assert hdbscan._raw_data is model._raw_data
-    assert hdbscan._raw_data.shape[0] == X_missing_data.shape[0]
+    assert hdbscan._raw_data.shape[0] == X_missing.shape[0]
     assert hdbscan._neighbors is model._knn_neighbors
     assert np.allclose(hdbscan._core_distances, model._knn_distances[:, -1])
-    assert hdbscan.labels_.shape[0] == X_missing_data.shape[0]
+    assert hdbscan.labels_.shape[0] == X_missing.shape[0]
     assert hdbscan.labels_[0] == -1
     assert hdbscan.labels_[6] == -1
     assert len(set(hdbscan.labels_)) == 6
 
 
-def test_hdbscan_weighted():
-    model = KMST().fit(X_missing_data)
-    hdbscan = model.hdbscan(sample_weights=y, min_cluster_size=5)
+def test_hdbscan_weighted(X_missing):
+    model = KMST().fit(X_missing)
+    hdbscan = model.hdbscan(
+        sample_weights=np.ones(X_missing.shape[0]) / 2, min_cluster_size=5
+    )
 
     assert isinstance(hdbscan, HDBSCAN)
     assert hdbscan.min_samples == model.num_neighbors
     assert hdbscan._raw_data is model._raw_data
-    assert hdbscan._raw_data.shape[0] == X_missing_data.shape[0]
+    assert hdbscan._raw_data.shape[0] == X_missing.shape[0]
     assert hdbscan._neighbors is model._knn_neighbors
     assert np.allclose(hdbscan._core_distances, model._knn_distances[:, -1])
-    assert hdbscan.labels_.shape[0] == X_missing_data.shape[0]
+    assert hdbscan.labels_.shape[0] == X_missing.shape[0]
     assert hdbscan.labels_[0] == -1
     assert hdbscan.labels_[6] == -1
-    assert len(set(hdbscan.labels_)) == 1
+    assert len(set(hdbscan.labels_)) == 3
 
 
-def test_hdbscan_branches():
-    model = KMST().fit(X_missing_data)
+def test_hdbscan_branches(X_missing):
+    model = KMST().fit(X_missing)
     hdbscan = model.hdbscan(min_cluster_size=5)
     d = model.branch_detector(hdbscan)
 
@@ -241,8 +219,8 @@ def test_hdbscan_branches():
     assert len(set(d.labels_)) == 9
 
 
-def test_hdbscan_boundary_clusters():
-    model = KMST().fit(X_missing_data)
+def test_hdbscan_boundary_clusters(X_missing):
+    model = KMST().fit(X_missing)
     hdbscan = model.hdbscan(min_cluster_size=5)
     bc = model.boundary_cluster_detector(hdbscan)
 
@@ -252,24 +230,24 @@ def test_hdbscan_boundary_clusters():
     assert len(set(bc.labels_)) == 6
 
 
-def test_hbcc():
-    model = KMST().fit(X_missing_data)
+def test_hbcc(X_missing):
+    model = KMST().fit(X_missing)
     hbcc = model.hbcc(min_cluster_size=5)
 
     assert isinstance(hbcc, HBCC)
     assert hbcc.min_samples == model.num_neighbors
     assert hbcc._raw_data is model._raw_data
-    assert hbcc._raw_data.shape[0] == X_missing_data.shape[0]
+    assert hbcc._raw_data.shape[0] == X_missing.shape[0]
     assert hbcc._neighbors is model._knn_neighbors
     assert np.allclose(hbcc._core_distances, model._knn_distances[:, -1])
-    assert hbcc.labels_.shape[0] == X_missing_data.shape[0]
+    assert hbcc.labels_.shape[0] == X_missing.shape[0]
     assert hbcc.labels_[0] == -1
     assert hbcc.labels_[6] == -1
     assert len(set(hbcc.labels_)) > 1
 
 
-def test_hbcc_branches():
-    model = KMST().fit(X_missing_data)
+def test_hbcc_branches(X_missing):
+    model = KMST().fit(X_missing)
     hbcc = model.hbcc(min_cluster_size=5)
     d = model.branch_detector(hbcc)
 

@@ -2,6 +2,7 @@ from .boruvka import multi_boruvka, noisy_boruvka_union, multi_boruvka_recall
 from .kdtree import KDTreeIndex
 from .kdtree_noisy import NoisyKDTreeIndex
 from .descent import DescentIndex
+from .precomputed_descent import PrecomputedIndex
 from .descent_recall import DescentRecallIndex
 from .branches import BranchDetector
 from .graph import (

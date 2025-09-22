@@ -94,7 +94,7 @@ class MultiMSTMixin:
         self: MultiMSTMixin
             The fitted estimator.
         """
-        X = check_array(X, ensure_all_finite=False)
+        X = check_array(X, ensure_all_finite=self.metric == "precomputed")
         self._raw_data = X
 
         self._all_finite = np.all(np.isfinite(X))
@@ -581,6 +581,10 @@ class MultiMSTMixin:
                 "barnes_hut algorithm as it relies on "
                 "quad-tree or oct-tree."
             )
+        if init == "pca" and self.metric == "precomputed":
+            raise ValueError(
+                "PCA initialization not supported with precomputed metric."
+            )
 
         # Extract raw data
         X = self._raw_data
@@ -885,7 +889,7 @@ class MultiMSTMixin:
             if hop_type == "metric":
                 raise ValueError(
                     'BoundaryClusterDetector requires "euclidean" '
-                    'metric with `hop_type="manifold".'
+                    'metric with `hop_type="metric".'
                 )
             if not boundary_use_reachability:
                 raise ValueError(
@@ -1063,6 +1067,8 @@ class MultiMSTMixin:
         flare-sensitive clustering algorithm. PeerJ Computer Science 11:e2792
         https://doi.org/10.7717/peerj-cs.2792.
         """
+        if self.metric == "precomputed":
+            raise ValueError("BranchDetector cannot be used with precomputed metric.")
 
         return BranchDetector(
             metric=self.metric,
@@ -1204,7 +1210,7 @@ class MultiMSTMixin:
             The graphviz program to run.
         **kwargs
             Additional arguments to `networkx.nx_agraph.graphviz_layout`.
-        
+
         Returns
         -------
         coords : ndarray of shape (num_points, 2)

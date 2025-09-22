@@ -6,7 +6,7 @@ from fast_hbcc.hbcc import check_greater_equal
 
 
 from .base import MultiMSTMixin
-from .lib import multi_boruvka, DescentIndex, make_csr_graph
+from .lib import multi_boruvka, DescentIndex, PrecomputedIndex, make_csr_graph
 from .kmst import validate_parameters as validate_parameters_kmst
 
 
@@ -159,7 +159,9 @@ def kMSTDescent(
         it must be a numba njit compiled function. See the pynndescent docs for
         supported metrics. Metrics that take arguments (such as minkowski,
         mahalanobis etc.) can have arguments passed via the metric_kwds
-        dictionary.
+        dictionary. Precomputed distances can be passed to `data` as a 1D
+        condensed or 2D square array, in which case the metric must be
+        'precomputed'.
 
     metric_kwds: dict (optional, default {})
         Arguments to pass on to the metric, such as the ``p`` value for
@@ -203,15 +205,24 @@ def kMSTDescent(
     data, epsilon = validate_parameters(
         data, num_neighbors, min_samples, epsilon, min_descent_neighbors
     )
-    index = DescentIndex(
-        data,
-        metric,
-        metric_kwds,
-        num_neighbors,
-        min_samples,
-        min_descent_neighbors,
-        nn_kwargs,
-    )
+    if metric == "precomputed":
+        index = PrecomputedIndex(
+            data,
+            num_neighbors,
+            min_samples,
+            min_descent_neighbors,
+            nn_kwargs,
+        )
+    else:
+        index = DescentIndex(
+            data,
+            metric,
+            metric_kwds,
+            num_neighbors,
+            min_samples,
+            min_descent_neighbors,
+            nn_kwargs,
+        )
     mst_edges, k_edges, neighbors, distances = multi_boruvka(index, epsilon)
     graph = make_csr_graph(mst_edges, k_edges, neighbors.shape[0])
     return (graph, mst_edges, neighbors, distances)

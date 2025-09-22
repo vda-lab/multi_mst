@@ -1,9 +1,7 @@
-"""Tests for k-MST"""
+"""Tests for k-MST descent"""
 
 import pytest
 import numpy as np
-from sklearn.datasets import make_blobs
-from sklearn.preprocessing import StandardScaler
 
 from umap import UMAP
 from sklearn.manifold import TSNE
@@ -15,32 +13,7 @@ from multi_mst.lib import BranchDetector
 from .test_kmst import invariants
 
 
-def generate_noisy_data():
-    blobs, yBlobs = make_blobs(
-        n_samples=50,
-        centers=[(-0.75, 2.25), (2.0, -0.5)],
-        cluster_std=0.2,
-        random_state=3,
-    )
-    np.random.seed(5)
-    noise = np.random.uniform(-1.0, 3.0, (50, 2))
-    yNoise = np.full(50, -1)
-    return (
-        np.vstack((blobs, noise)),
-        np.concatenate((yBlobs, yNoise)),
-    )
-
-
-X, y = generate_noisy_data()
-X = StandardScaler().fit_transform(X)
-
-clean_indices = list(range(1, 6)) + list(range(7, X.shape[0]))
-X_missing_data = X.copy()
-X_missing_data[0] = [np.nan, 1]
-X_missing_data[6] = [np.nan, np.nan]
-
-
-def test_badargs():
+def test_badargs(X):
     """Tests parameter validation."""
     with pytest.raises(ValueError):
         kMSTDescent(X, num_neighbors=1.0)
@@ -66,48 +39,48 @@ def test_badargs():
         kMSTDescent(X, min_samples=-1)
 
 
-def test_defaults():
+def test_defaults(X):
     """Tests with default parameters."""
     p = KMSTDescent().fit(X)
-    invariants(p)
+    invariants(p, X)
 
 
-def test_min_samples():
+def test_min_samples(X):
     """Tests with higher min_samples."""
     p = KMSTDescent(min_samples=3).fit(X)
-    invariants(p)
+    invariants(p, X)
 
 
-def test_num_neighbors():
+def test_num_neighbors(X):
     """Tests with lower num_neighbors."""
     p = KMSTDescent(num_neighbors=1).fit(X)
-    invariants(p)
+    invariants(p, X)
 
 
-def test_descent_neighbors():
+def test_descent_neighbors(X):
     """Tests with lower descent_neighbors."""
     p = KMSTDescent(min_descent_neighbors=6).fit(X)
-    invariants(p)
+    invariants(p, X)
 
 
-def test_epsilon():
+def test_epsilon(X):
     """Tests with epsilon."""
     base = KMSTDescent().fit(X)
     p = KMSTDescent(epsilon=1.1).fit(X)
-    invariants(p)
+    invariants(p, X)
     assert p.graph_.nnz < base.graph_.nnz
 
 
-def test_metric():
+def test_metric(X):
     """Tests with higher min_samples."""
     p = KMSTDescent(metric="sqeuclidean").fit(X)
-    invariants(p)
+    invariants(p, X)
 
 
-def test_with_missing_data():
+def test_with_missing_data(X_missing, clean_indices):
     """Tests with nan data."""
-    model = KMSTDescent().fit(X_missing_data)
-    clean_model = KMSTDescent().fit(X_missing_data[clean_indices])
+    model = KMSTDescent().fit(X_missing)
+    clean_model = KMSTDescent().fit(X_missing[clean_indices])
 
     # No edges to the missing data
     assert np.all(
@@ -131,72 +104,74 @@ def test_with_missing_data():
     )
 
 
-def test_umap():
-    model = KMSTDescent().fit(X_missing_data)
+def test_umap(X_missing):
+    model = KMSTDescent().fit(X_missing)
     umap = model.umap()
 
     assert isinstance(umap, UMAP)
-    assert umap.embedding_.shape == (X_missing_data.shape[0] - 2, 2)
+    assert umap.embedding_.shape == (X_missing.shape[0] - 2, 2)
 
 
-def test_tsne():
-    model = KMSTDescent().fit(X_missing_data)
+def test_tsne(X_missing):
+    model = KMSTDescent().fit(X_missing)
     tsne = model.tsne()
 
     assert isinstance(tsne, TSNE)
-    assert tsne.embedding_.shape == (X_missing_data.shape[0] - 2, 2)
+    assert tsne.embedding_.shape == (X_missing.shape[0] - 2, 2)
 
 
-def test_hdbscan():
-    model = KMSTDescent().fit(X_missing_data)
+def test_hdbscan(X_missing):
+    model = KMSTDescent().fit(X_missing)
     hdbscan = model.hdbscan(min_cluster_size=5)
 
     assert isinstance(hdbscan, HDBSCAN)
     assert hdbscan.min_samples == model.num_neighbors
     assert hdbscan._raw_data is model._raw_data
-    assert hdbscan._raw_data.shape[0] == X_missing_data.shape[0]
+    assert hdbscan._raw_data.shape[0] == X_missing.shape[0]
     assert hdbscan._neighbors is model._knn_neighbors
     assert np.allclose(hdbscan._core_distances, model._knn_distances[:, -1])
-    assert hdbscan.labels_.shape[0] == X_missing_data.shape[0]
+    assert hdbscan.labels_.shape[0] == X_missing.shape[0]
     assert hdbscan.labels_[0] == -1
     assert hdbscan.labels_[6] == -1
     assert len(set(hdbscan.labels_)) == 6
 
 
-def test_hdbscan_min_samples():
-    model = KMSTDescent(min_samples=3).fit(X_missing_data)
+def test_hdbscan_min_samples(X_missing):
+    model = KMSTDescent(min_samples=3).fit(X_missing)
     hdbscan = model.hdbscan(min_cluster_size=5)
 
     assert isinstance(hdbscan, HDBSCAN)
     assert hdbscan.min_samples == model.num_neighbors
     assert hdbscan._raw_data is model._raw_data
-    assert hdbscan._raw_data.shape[0] == X_missing_data.shape[0]
+    assert hdbscan._raw_data.shape[0] == X_missing.shape[0]
     assert hdbscan._neighbors is model._knn_neighbors
     assert np.allclose(hdbscan._core_distances, model._knn_distances[:, -1])
-    assert hdbscan.labels_.shape[0] == X_missing_data.shape[0]
+    assert hdbscan.labels_.shape[0] == X_missing.shape[0]
     assert hdbscan.labels_[0] == -1
     assert hdbscan.labels_[6] == -1
     assert len(set(hdbscan.labels_)) == 6
 
 
-def test_hdbscan_weighted():
-    model = KMSTDescent(metric="cosine").fit(X_missing_data)
-    hdbscan = model.hdbscan(sample_weights=y, min_cluster_size=5)
+def test_hdbscan_weighted(X_missing):
+    model = KMSTDescent(metric="cosine").fit(X_missing)
+    hdbscan = model.hdbscan(
+        sample_weights=np.ones(X_missing.shape[0]) / 2, min_cluster_size=5
+    )
 
     assert isinstance(hdbscan, HDBSCAN)
     assert hdbscan.min_samples == model.num_neighbors
     assert hdbscan._raw_data is model._raw_data
-    assert hdbscan._raw_data.shape[0] == X_missing_data.shape[0]
+    assert hdbscan._raw_data.shape[0] == X_missing.shape[0]
     assert hdbscan._neighbors is model._knn_neighbors
     assert np.allclose(hdbscan._core_distances, model._knn_distances[:, -1])
-    assert hdbscan.labels_.shape[0] == X_missing_data.shape[0]
+    assert hdbscan.labels_.shape[0] == X_missing.shape[0]
     assert hdbscan.labels_[0] == -1
     assert hdbscan.labels_[6] == -1
-    assert len(set(hdbscan.labels_)) == 1
+    assert len(set(hdbscan.labels_)) == 5
 
 
-def test_hdbscan_branches():
-    model = KMSTDescent(metric="cosine").fit(X_missing_data)
+def test_hdbscan_branches(X_missing):
+    model = KMSTDescent(metric="cosine").fit(X_missing)
     hdbscan = model.hdbscan(min_cluster_size=5)
     d = model.branch_detector(hdbscan)
 
@@ -206,8 +181,8 @@ def test_hdbscan_branches():
     assert len(set(d.labels_)) == 8
 
 
-def test_hdbscan_boundary_clusters():
-    model = KMSTDescent().fit(X_missing_data)
+def test_hdbscan_boundary_clusters(X_missing):
+    model = KMSTDescent().fit(X_missing)
     hdbscan = model.hdbscan(min_cluster_size=5)
     bc = model.boundary_cluster_detector(hdbscan)
 
@@ -217,8 +192,8 @@ def test_hdbscan_boundary_clusters():
     assert len(set(bc.labels_)) == 6
 
 
-def test_hdbscan_boundary_clusters_no_reachability():
-    model = KMSTDescent().fit(X_missing_data)
+def test_hdbscan_boundary_clusters_no_reachability(X_missing):
+    model = KMSTDescent().fit(X_missing)
     hdbscan = model.hdbscan(min_cluster_size=5)
     bc = model.boundary_cluster_detector(hdbscan, boundary_use_reachability=False)
 
@@ -228,8 +203,8 @@ def test_hdbscan_boundary_clusters_no_reachability():
     assert len(set(bc.labels_)) == 7
 
 
-def test_hdbscan_boundary_clusters_metric():
-    model = KMSTDescent().fit(X_missing_data)
+def test_hdbscan_boundary_clusters_metric(X_missing):
+    model = KMSTDescent().fit(X_missing)
     hdbscan = model.hdbscan(min_cluster_size=5)
     bc = model.boundary_cluster_detector(hdbscan, hop_type="metric")
 
@@ -239,8 +214,8 @@ def test_hdbscan_boundary_clusters_metric():
     assert len(set(bc.labels_)) == 6
 
 
-def test_hdbscan_boundary_clusters_not_euclidean():
-    model = KMSTDescent(metric="cosine").fit(X_missing_data)
+def test_hdbscan_boundary_clusters_not_euclidean(X_missing):
+    model = KMSTDescent(metric="cosine").fit(X_missing)
     hdbscan = model.hdbscan(min_cluster_size=5)
     bc = model.boundary_cluster_detector(hdbscan)
 
@@ -256,65 +231,65 @@ def test_hdbscan_boundary_clusters_not_euclidean():
         model.boundary_cluster_detector(hdbscan, hop_type="metric")
 
 
-def test_hbcc():
-    model = KMSTDescent().fit(X_missing_data)
+def test_hbcc(X_missing):
+    model = KMSTDescent().fit(X_missing)
     hbcc = model.hbcc(min_cluster_size=5)
 
     assert isinstance(hbcc, HBCC)
     assert hbcc.min_samples == model.num_neighbors
     assert hbcc._raw_data is model._raw_data
-    assert hbcc._raw_data.shape[0] == X_missing_data.shape[0]
+    assert hbcc._raw_data.shape[0] == X_missing.shape[0]
     assert hbcc._neighbors is model._knn_neighbors
     assert np.allclose(hbcc._core_distances, model._knn_distances[:, -1])
-    assert hbcc.labels_.shape[0] == X_missing_data.shape[0]
+    assert hbcc.labels_.shape[0] == X_missing.shape[0]
     assert hbcc.labels_[0] == -1
     assert hbcc.labels_[6] == -1
     assert len(set(hbcc.labels_)) > 1
 
 
-def test_hbcc_no_reachability():
-    model = KMSTDescent().fit(X_missing_data)
+def test_hbcc_no_reachability(X_missing):
+    model = KMSTDescent().fit(X_missing)
     hbcc = model.hbcc(min_cluster_size=5, boundary_use_reachability=False)
 
     assert isinstance(hbcc, HBCC)
     assert hbcc.min_samples == model.num_neighbors
     assert hbcc._raw_data is model._raw_data
-    assert hbcc._raw_data.shape[0] == X_missing_data.shape[0]
+    assert hbcc._raw_data.shape[0] == X_missing.shape[0]
     assert hbcc._neighbors is model._knn_neighbors
     assert np.allclose(hbcc._core_distances, model._knn_distances[:, -1])
-    assert hbcc.labels_.shape[0] == X_missing_data.shape[0]
+    assert hbcc.labels_.shape[0] == X_missing.shape[0]
     assert hbcc.labels_[0] == -1
     assert hbcc.labels_[6] == -1
     assert len(set(hbcc.labels_)) > 1
 
 
-def test_hbcc_metric():
-    model = KMSTDescent().fit(X_missing_data)
+def test_hbcc_metric(X_missing):
+    model = KMSTDescent().fit(X_missing)
     hbcc = model.hbcc(min_cluster_size=5, hop_type="metric")
 
     assert isinstance(hbcc, HBCC)
     assert hbcc.min_samples == model.num_neighbors
     assert hbcc._raw_data is model._raw_data
-    assert hbcc._raw_data.shape[0] == X_missing_data.shape[0]
+    assert hbcc._raw_data.shape[0] == X_missing.shape[0]
     assert hbcc._neighbors is model._knn_neighbors
     assert np.allclose(hbcc._core_distances, model._knn_distances[:, -1])
-    assert hbcc.labels_.shape[0] == X_missing_data.shape[0]
+    assert hbcc.labels_.shape[0] == X_missing.shape[0]
     assert hbcc.labels_[0] == -1
     assert hbcc.labels_[6] == -1
     assert len(set(hbcc.labels_)) > 1
 
 
-def test_hbcc_not_euclidean():
-    model = KMSTDescent(metric="cosine").fit(X_missing_data)
+def test_hbcc_not_euclidean(X_missing):
+    model = KMSTDescent(metric="cosine").fit(X_missing)
     hbcc = model.hbcc(min_cluster_size=5)
 
     assert isinstance(hbcc, HBCC)
     assert hbcc.min_samples == model.num_neighbors
     assert hbcc._raw_data is model._raw_data
-    assert hbcc._raw_data.shape[0] == X_missing_data.shape[0]
+    assert hbcc._raw_data.shape[0] == X_missing.shape[0]
     assert hbcc._neighbors is model._knn_neighbors
     assert np.allclose(hbcc._core_distances, model._knn_distances[:, -1])
-    assert hbcc.labels_.shape[0] == X_missing_data.shape[0]
+    assert hbcc.labels_.shape[0] == X_missing.shape[0]
     assert hbcc.labels_[0] == -1
     assert hbcc.labels_[6] == -1
     assert len(set(hbcc.labels_)) > 1
@@ -326,8 +301,8 @@ def test_hbcc_not_euclidean():
         model.hbcc(hop_type="metric")
 
 
-def test_hbcc_branches():
-    model = KMSTDescent(metric="cosine").fit(X_missing_data)
+def test_hbcc_branches(X_missing):
+    model = KMSTDescent(metric="cosine").fit(X_missing)
     hbcc = model.hbcc(min_cluster_size=5)
     d = model.branch_detector(hbcc)
 

@@ -127,9 +127,9 @@ Computing $k$-MSTs using KDTrees can be expensive on some datasets. We provide a
 version of the algorithm based on Nearest Neighbor Descent for quicker
 approximations. We combined Boruvka's algorithm with NNDescent to find neighbors
 that are not already connected in the MST being build. This variant supports all
-distance metrics implemented in `pynndescent`. Combined with `fast_hdbscan`'s
-cluster selection, it can greatly speed up computing (approximate) clusters on
-high dimensional data-sets!
+distance metrics implemented in `pynndescent` and precomputed distances.
+Combined with `fast_hdbscan`'s cluster selection, it can greatly speed up
+computing (approximate) clusters on high dimensional data-sets!
 
 
 ```python
@@ -137,9 +137,13 @@ import matplotlib.pyplot as plt
 import matplotlib.collections as mc
 from sklearn.datasets import make_swiss_roll
 from multi_mst import KMSTDescent
+from scipy.spatial.distance import pdist, squareform
 
 X, t = make_swiss_roll(n_samples=2000, noise=0.5, hole=True)
-model = KMSTDescent(num_neighbors=3, epsilon=2.0).fit(X)
+model = KMSTDescent(num_neighbors=3, epsilon=2.0).fit(X) # or
+model = KMSTDescent(
+    num_neighbors=3, epsilon=2.0, metric="precomputed"
+).fit(squareform(pdist(X)))
 projector = model.umap(repulsion_strength=1.0)
 
 # Draw the network

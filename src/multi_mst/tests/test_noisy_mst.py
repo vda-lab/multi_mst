@@ -1,9 +1,7 @@
-"""Tests for k-MST"""
+"""Tests for noisy k-MST"""
 
 import pytest
 import numpy as np
-from sklearn.datasets import make_blobs
-from sklearn.preprocessing import StandardScaler
 from scipy.sparse.csgraph import connected_components
 from scipy.sparse import coo_array
 
@@ -15,32 +13,7 @@ from multi_mst import noisyMST, NoisyMST
 from multi_mst.lib import BranchDetector
 
 
-def generate_noisy_data():
-    blobs, yBlobs = make_blobs(
-        n_samples=50,
-        centers=[(-0.75, 2.25), (2.0, -0.5)],
-        cluster_std=0.2,
-        random_state=3,
-    )
-    np.random.seed(5)
-    noise = np.random.uniform(-1.0, 3.0, (50, 2))
-    yNoise = np.full(50, -1)
-    return (
-        np.vstack((blobs, noise)),
-        np.concatenate((yBlobs, yNoise)),
-    )
-
-
-X, y = generate_noisy_data()
-X = StandardScaler().fit_transform(X)
-
-clean_indices = list(range(1, 6)) + list(range(7, X.shape[0]))
-X_missing_data = X.copy()
-X_missing_data[0] = [np.nan, 1]
-X_missing_data[6] = [np.nan, np.nan]
-
-
-def invariants(p):
+def invariants(p, X):
     g = p.graph_
     assert g.shape == (X.shape[0], X.shape[0])
     assert connected_components(g, directed=False, return_labels=False) == 1
@@ -91,7 +64,7 @@ def invariants(p):
         )
 
 
-def test_badargs():
+def test_badargs(X):
     """Tests parameter validation."""
     with pytest.raises(ValueError):
         noisyMST(X, num_neighbors=1.0)
@@ -111,34 +84,34 @@ def test_badargs():
         noisyMST(X, min_samples=-1)
 
 
-def test_defaults():
+def test_defaults(X):
     """Tests with default parameters."""
     p = NoisyMST().fit(X)
-    invariants(p)
+    invariants(p, X)
 
 
-def test_min_samples():
+def test_min_samples(X):
     """Tests with higher min_samples."""
     p = NoisyMST(min_samples=3).fit(X)
-    invariants(p)
+    invariants(p, X)
 
 
-def test_num_neighbors():
+def test_num_neighbors(X):
     """Tests with lower num_neighbors."""
     p = NoisyMST(num_neighbors=1).fit(X)
-    invariants(p)
+    invariants(p, X)
 
 
-def test_noise_fraction():
+def test_noise_fraction(X):
     """Tests with epsilon."""
     p = NoisyMST(noise_fraction=0.5).fit(X)
-    invariants(p)
+    invariants(p, X)
 
 
-def test_with_missing_data():
+def test_with_missing_data(X_missing):
     """Tests with nan data."""
     # cannot compare two noisy MSTs and expect them to be equal!
-    model = NoisyMST().fit(X_missing_data)
+    model = NoisyMST().fit(X_missing)
 
     # No edges to the missing data
     assert np.all(model.graph_.indices != 0)
@@ -152,72 +125,74 @@ def test_with_missing_data():
     assert np.isinf(model.graph_distances_[6, :]).all()
 
 
-def test_umap():
-    model = NoisyMST().fit(X_missing_data)
+def test_umap(X_missing):
+    model = NoisyMST().fit(X_missing)
     umap = model.umap()
 
     assert isinstance(umap, UMAP)
-    assert umap.embedding_.shape == (X_missing_data.shape[0] - 2, 2)
+    assert umap.embedding_.shape == (X_missing.shape[0] - 2, 2)
 
 
-def test_tsne():
-    model = NoisyMST().fit(X_missing_data)
+def test_tsne(X_missing):
+    model = NoisyMST().fit(X_missing)
     tsne = model.tsne()
 
     assert isinstance(tsne, TSNE)
-    assert tsne.embedding_.shape == (X_missing_data.shape[0] - 2, 2)
+    assert tsne.embedding_.shape == (X_missing.shape[0] - 2, 2)
 
 
-def test_hdbscan():
-    model = NoisyMST().fit(X_missing_data)
+def test_hdbscan(X_missing):
+    model = NoisyMST().fit(X_missing)
     hdbscan = model.hdbscan(min_cluster_size=5)
 
     assert isinstance(hdbscan, HDBSCAN)
     assert hdbscan.min_samples == model.num_neighbors
     assert hdbscan._raw_data is model._raw_data
-    assert hdbscan._raw_data.shape[0] == X_missing_data.shape[0]
+    assert hdbscan._raw_data.shape[0] == X_missing.shape[0]
     assert hdbscan._neighbors is model._knn_neighbors
     assert np.allclose(hdbscan._core_distances, model._knn_distances[:, -1])
-    assert hdbscan.labels_.shape[0] == X_missing_data.shape[0]
+    assert hdbscan.labels_.shape[0] == X_missing.shape[0]
     assert hdbscan.labels_[0] == -1
     assert hdbscan.labels_[6] == -1
     assert len(set(hdbscan.labels_)) > 1
 
 
-def test_hdbscan_min_samples():
-    model = NoisyMST(min_samples=3).fit(X_missing_data)
+def test_hdbscan_min_samples(X_missing):
+    model = NoisyMST(min_samples=3).fit(X_missing)
     hdbscan = model.hdbscan(min_cluster_size=5)
 
     assert isinstance(hdbscan, HDBSCAN)
     assert hdbscan.min_samples == model.num_neighbors
     assert hdbscan._raw_data is model._raw_data
-    assert hdbscan._raw_data.shape[0] == X_missing_data.shape[0]
+    assert hdbscan._raw_data.shape[0] == X_missing.shape[0]
     assert hdbscan._neighbors is model._knn_neighbors
     assert np.allclose(hdbscan._core_distances, model._knn_distances[:, -1])
-    assert hdbscan.labels_.shape[0] == X_missing_data.shape[0]
+    assert hdbscan.labels_.shape[0] == X_missing.shape[0]
     assert hdbscan.labels_[0] == -1
     assert hdbscan.labels_[6] == -1
     assert len(set(hdbscan.labels_)) > 1
 
 
-def test_hdbscan_weighted():
-    model = NoisyMST().fit(X_missing_data)
-    hdbscan = model.hdbscan(sample_weights=y, min_cluster_size=5)
+def test_hdbscan_weighted(X_missing):
+    model = NoisyMST().fit(X_missing)
+    hdbscan = model.hdbscan(
+        sample_weights=np.ones(X_missing.shape[0]) / 2, min_cluster_size=5
+    )
 
     assert isinstance(hdbscan, HDBSCAN)
     assert hdbscan.min_samples == model.num_neighbors
     assert hdbscan._raw_data is model._raw_data
-    assert hdbscan._raw_data.shape[0] == X_missing_data.shape[0]
+    assert hdbscan._raw_data.shape[0] == X_missing.shape[0]
     assert hdbscan._neighbors is model._knn_neighbors
     assert np.allclose(hdbscan._core_distances, model._knn_distances[:, -1])
-    assert hdbscan.labels_.shape[0] == X_missing_data.shape[0]
+    assert hdbscan.labels_.shape[0] == X_missing.shape[0]
     assert hdbscan.labels_[0] == -1
     assert hdbscan.labels_[6] == -1
-    assert len(set(hdbscan.labels_)) == 1
+    assert len(set(hdbscan.labels_)) == 3
 
 
-def test_hdbscan_branches():
-    model = NoisyMST().fit(X_missing_data)
+def test_hdbscan_branches(X_missing):
+    model = NoisyMST().fit(X_missing)
     hdbscan = model.hdbscan(min_cluster_size=5)
     d = model.branch_detector(hdbscan)
 
@@ -227,8 +202,8 @@ def test_hdbscan_branches():
     assert len(set(d.labels_)) > 1
 
 
-def test_hdbscan_boundary_clusters():
-    model = NoisyMST().fit(X_missing_data)
+def test_hdbscan_boundary_clusters(X_missing):
+    model = NoisyMST().fit(X_missing)
     hdbscan = model.hdbscan(min_cluster_size=5)
     bc = model.boundary_cluster_detector(hdbscan)
 
@@ -238,24 +213,24 @@ def test_hdbscan_boundary_clusters():
     assert len(set(bc.labels_)) > 1
 
 
-def test_hbcc():
-    model = NoisyMST().fit(X_missing_data)
+def test_hbcc(X_missing):
+    model = NoisyMST().fit(X_missing)
     hbcc = model.hbcc(min_cluster_size=5)
 
     assert isinstance(hbcc, HBCC)
     assert hbcc.min_samples == model.num_neighbors
     assert hbcc._raw_data is model._raw_data
-    assert hbcc._raw_data.shape[0] == X_missing_data.shape[0]
+    assert hbcc._raw_data.shape[0] == X_missing.shape[0]
     assert hbcc._neighbors is model._knn_neighbors
     assert np.allclose(hbcc._core_distances, model._knn_distances[:, -1])
-    assert hbcc.labels_.shape[0] == X_missing_data.shape[0]
+    assert hbcc.labels_.shape[0] == X_missing.shape[0]
     assert hbcc.labels_[0] == -1
     assert hbcc.labels_[6] == -1
     assert len(set(hbcc.labels_)) > 1
 
 
-def test_hbcc_branches():
-    model = NoisyMST().fit(X_missing_data)
+def test_hbcc_branches(X_missing):
+    model = NoisyMST().fit(X_missing)
     hbcc = model.hbcc(min_cluster_size=5)
     d = model.branch_detector(hbcc)
 
