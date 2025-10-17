@@ -6,3 +6,5 @@ created or adapted for a paper by [Robert W. Sumner and Jovan Popovic
 (2004)](https://dl.acm.org/doi/10.1145/1015706.1015736#d17686678e1). They
 can be downloaded and are described in more detail on [their
 website](https://people.csail.mit.edu/sumner/research/deftransfer/data.html).
+
+Run `to_X.py` to convert the .csv file to a numpy format.
