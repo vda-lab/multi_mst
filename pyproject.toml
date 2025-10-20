@@ -41,7 +41,7 @@ namespaces = false
 [project.optional-dependencies]
 tests = ["pytest"]
 docs = [
-  "sphinx >= 8",
+  # "sphinx >= 8.2", assume CI/CD system has latest version
   "nbsphinx >= 0.9",
   "sphinx_rtd_theme >= 2.0",
   "matplotlib >= 3.8",

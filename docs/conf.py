@@ -84,7 +84,7 @@ html_static_path = ['_static']
 intersphinx_mapping = {
     "python": ("https://docs.python.org/{.major}".format(sys.version_info), None),
     "numpy": ("https://docs.scipy.org/doc/numpy/", None),
-    "scikit-learn": ("https://scikit-learn.org/stable/modules/classes.html", None),
+    "scikit-learn": ("https://scikit-learn.org/stable/", None),
 }
 
 templates_path = ["_templates"]

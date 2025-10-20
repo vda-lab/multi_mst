@@ -186,6 +186,7 @@ Supported Tasks
 All three classes support several downstream tasks.
 
 .. code:: python
+    
     # Dimensionality reduction
     # - Creates fitted UMAP or TSNE models from the computed manifold graph.
     projector = model.umap(n_components=2) # or
