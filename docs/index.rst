@@ -186,7 +186,15 @@ Supported Tasks
 All three classes support several downstream tasks.
 
 .. code:: python
+    # Dimensionality reduction
+    # - Creates fitted UMAP or TSNE models from the computed manifold graph.
+    projector = model.umap(n_components=2) # or
+    projector = model.tsne(n_components=2)
 
+    # Graph layouts
+    # - Computes a 2D graph layout using (py)graphviz and networkx.
+    embedding = model.graphviz_layout(prog="sfdp")
+    
     # HDBSCAN or HBCC clusters
     # - Creates a fitted HDBSCAN or HBCC model from the computed manifold graph.
     # - Computes mutual-reachability from the model's number of neighbors.
