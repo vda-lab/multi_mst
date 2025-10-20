@@ -43,8 +43,8 @@ def decode_fn(record_bytes):
 if __name__ == "__main__":
     features = dict()
     with tempfile.TemporaryDirectory() as tmpdir:
-        sources_file = "docs/data/audioset/sources/features.tar.gz"
-        train_set_file = "docs/data/audioset/generated/unbalanced_music_segments.csv"
+        sources_file = "notebooks/data/audioset/sources/features.tar.gz"
+        train_set_file = "notebooks/data/audioset/generated/unbalanced_music_segments.csv"
 
         train_set = pd.read_csv(train_set_file)
         dataset = load_tfrecords_from_tar(sources_file, tmpdir)
@@ -59,6 +59,6 @@ if __name__ == "__main__":
     id = train_set.video_id.to_numpy()
     mask = [x.shape[0] == 1280 for x in X]
 
-    np.save("docs/data/audioset/generated/X.npy", np.stack(X[mask]))
-    np.save("docs/data/audioset/generated/y.npy", y[mask])
-    np.save("docs/data/audioset/generated/video_id.npy", id[mask])
+    np.save("notebooks/data/audioset/generated/X.npy", np.stack(X[mask]))
+    np.save("notebooks/data/audioset/generated/y.npy", y[mask])
+    np.save("notebooks/data/audioset/generated/video_id.npy", id[mask])

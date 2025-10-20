@@ -54,7 +54,7 @@ if __name__ == "__main__":
     subset.drop(columns=["label_id", "music_ids"], inplace=True)
 
     # Write the resulting files
-    genres.to_csv("docs/data/audioset/generated/genres.csv", index=False)
+    genres.to_csv("notebooks/data/audioset/generated/genres.csv", index=False)
     subset.to_csv(
-        "docs/data/audioset/generated/unbalanced_music_segments.csv", index=False
+        "notebooks/data/audioset/generated/unbalanced_music_segments.csv", index=False
     )

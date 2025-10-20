@@ -94,7 +94,7 @@ class MultiMSTMixin:
         self: MultiMSTMixin
             The fitted estimator.
         """
-        X = check_array(X, ensure_all_finite=self.metric == "precomputed")
+        X = check_array(X, ensure_all_finite=self.metric == "precomputed", order="C")
         self._raw_data = X
 
         self._all_finite = np.all(np.isfinite(X))

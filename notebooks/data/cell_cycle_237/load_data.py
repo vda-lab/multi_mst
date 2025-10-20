@@ -15,6 +15,6 @@ df = pd.read_csv(
     index_col=0,
 )
 
-df.to_parquet("docs/data/cell_cycle_237/sources/cell_cycle.parquet")
-np.save("docs/data/cell_cycle_237/generated/y.npy", df.iloc[:, 0].to_numpy())
-np.save("docs/data/cell_cycle_237/generated/X.npy", df.iloc[:, 1:].to_numpy())
+df.to_parquet("notebooks/data/cell_cycle_237/sources/cell_cycle.parquet")
+np.save("notebooks/data/cell_cycle_237/generated/y.npy", df.iloc[:, 0].to_numpy())
+np.save("notebooks/data/cell_cycle_237/generated/X.npy", df.iloc[:, 1:].to_numpy())

@@ -33,6 +33,7 @@ docs/_build/
 !notebooks/lib/
 notebooks/data/*/sources/
 notebooks/data/*/generated/
+notebooks/data/generated/sensitivity/
 
 # IPython
 profile_default/

@@ -8,7 +8,7 @@ from PIL import Image
 from transformers import AutoProcessor, AutoModel
 
 if __name__ == "__main__":
-    df = pd.read_parquet("docs/data/cifar_10/sources/cifar10-train.parquet")
+    df = pd.read_parquet("notebooks/data/cifar_10/sources/cifar10-train.parquet")
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model = AutoModel.from_pretrained(
@@ -36,7 +36,7 @@ if __name__ == "__main__":
     embedding = torch.cat(embeddings, dim=0)
 
     np.save(
-        "docs/data/cifar_10/generated/X.npy",
+        "notebooks/data/cifar_10/generated/X.npy",
         embedding.float().cpu().numpy().astype(np.float32),
     )
-    np.save("docs/data/cifar_10/generated/y.npy", df.label.to_numpy())
+    np.save("notebooks/data/cifar_10/generated/y.npy", df.label.to_numpy())

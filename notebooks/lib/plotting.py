@@ -1,47 +1,58 @@
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 import seaborn as sns
+from textwrap import dedent
 
-def configure_matplotlib():   
-    sns.set_style('white')
+# LaTeX font sizes on 10pt document:
+# https://latex-tutorial.com/changing-font-size/
+fontsize = dict(tiny=5, script=7, footnote=8, small=9, normal=10)
+
+
+def configure_matplotlib():
+    sns.set_style("white")
     sns.set_color_codes()
-    
-    mpl.rcParams['text.color'] = 'black'
-    mpl.rcParams['xtick.color'] = 'black'
-    mpl.rcParams['ytick.color'] = 'black'
-    mpl.rcParams['axes.labelcolor'] = 'black'
-    mpl.rcParams['xtick.bottom'] = True
-    mpl.rcParams['ytick.left'] = True
-    mpl.rcParams['ytick.major.size'] = mpl.rcParams['xtick.major.size']
-    mpl.rcParams['ytick.major.width'] = mpl.rcParams['xtick.major.width']    
-    mpl.rcParams['font.size'] = 8
-    mpl.rcParams['axes.labelsize'] = 8
-    mpl.rcParams['axes.titlesize'] = 10
-    mpl.rcParams['legend.fontsize'] = 6
-    mpl.rcParams['legend.title_fontsize'] = 6
-    mpl.rcParams['xtick.labelsize'] = 8
-    mpl.rcParams['ytick.labelsize'] = 8
-    mpl.rcParams['axes.unicode_minus'] = True
-    mpl.rcParams['axes.spines.left'] = False
-    mpl.rcParams['axes.spines.right'] = False
-    mpl.rcParams['axes.spines.top'] = False
-    mpl.rcParams['axes.spines.bottom'] = False
-    mpl.rcParams['savefig.dpi'] = 600
-    mpl.rcParams['savefig.format'] = 'png'
-    mpl.rcParams['text.usetex'] = True
-    mpl.rcParams['text.latex.preamble'] = """
-    \\usepackage{libertine}
-    \\renewcommand\\sfdefault{ppl}
-    """
-    
-    return sns.color_palette('tab10', 10)
+
+    mpl.rcParams.update(
+        {
+            "text.color": "black",
+            "xtick.color": "black",
+            "ytick.color": "black",
+            "axes.labelcolor": "black",
+            "xtick.bottom": True,
+            "ytick.left": True,
+            "axes.titlesize": fontsize["normal"],
+            "axes.labelsize": fontsize["small"],
+            "xtick.labelsize": fontsize["small"],
+            "ytick.labelsize": fontsize["small"],
+            "font.size": fontsize["footnote"],
+            "legend.title_fontsize": fontsize["footnote"],
+            "legend.fontsize": fontsize["footnote"],
+            "axes.unicode_minus": True,
+            "axes.spines.left": False,
+            "axes.spines.right": False,
+            "axes.spines.top": False,
+            "axes.spines.bottom": False,
+            "savefig.dpi": 300,
+            "savefig.format": "png",
+            "font.family": "serif",
+            "text.usetex": True,
+            "text.latex.preamble": dedent(
+                """
+                \\usepackage{libertine}
+                \\renewcommand\\sfdefault{ppl}
+                """
+            ),
+        }
+    )
+
+    return sns.color_palette("tab10", 10)
 
 
 def sized_fig(width=0.5, aspect=0.618):
     """Create a figure with width as fraction of an A4 page."""
     page_width_cm = 13.9
     inch = 2.54
-    w = (width * page_width_cm)
+    w = width * page_width_cm
     h = aspect * w
     return plt.figure(figsize=(w / inch, h / inch), dpi=150)
 
@@ -49,14 +60,14 @@ def sized_fig(width=0.5, aspect=0.618):
 def size_fig(width=0.5, aspect=0.618):
     page_width_cm = 13.9
     inch = 2.54
-    w = (width * page_width_cm)
+    w = width * page_width_cm
     h = aspect * w
 
     fig = plt.gcf()
     fig.set_dpi(150)
     fig.set_figwidth(w / inch)
     fig.set_figheight(h / inch)
-    
+
 
 def frame_off():
     """Disables frames and ticks, sets aspect ratio to 1."""

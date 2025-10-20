@@ -12,6 +12,6 @@ df = pd.read_csv(
     sep="\t",
 )
 
-df.to_parquet("docs/data/yeast_galactose/sources/knn12_gal205.parquet")
-np.save("docs/data/yeast_galactose/generated/y.npy", df["class"].to_numpy())
-np.save("docs/data/yeast_galactose/generated/X.npy", df.iloc[:, 3:].to_numpy())
+df.to_parquet("notebooks/data/yeast_galactose/sources/knn12_gal205.parquet")
+np.save("notebooks/data/yeast_galactose/generated/y.npy", df["class"].to_numpy())
+np.save("notebooks/data/yeast_galactose/generated/X.npy", df.iloc[:, 3:].to_numpy())

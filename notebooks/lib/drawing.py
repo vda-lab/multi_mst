@@ -8,7 +8,16 @@ from statsmodels.nonparametric.smoothers_lowess import lowess
 
 def _draw(xs, ys, sources, targets, color, size=0.3, alpha=0.2, s=1.7438):
     plt.figure(figsize=(s, s))
-    s = plt.scatter(xs, ys, c=color, s=size, edgecolors="none", linewidth=0, cmap='viridis', alpha=alpha)
+    s = plt.scatter(
+        xs,
+        ys,
+        c=color,
+        s=size,
+        edgecolors="none",
+        linewidth=0,
+        cmap="viridis",
+        alpha=alpha,
+    )
     lc = mc.LineCollection(
         list(zip(zip(xs[sources], ys[sources]), zip(xs[targets], ys[targets]))),
         linewidth=0.2,
@@ -37,7 +46,15 @@ def draw_umap(p, color=None, name="default", alg="umap", size=0.3, alpha=0.2):
     coo = p.graph_.tocoo()
     sources = coo.row
     targets = coo.col
-    _draw(p.embedding_[:, 0], p.embedding_[:, 1], sources, targets, color, size=size, alpha=alpha)
+    _draw(
+        p.embedding_[:, 0],
+        p.embedding_[:, 1],
+        sources,
+        targets,
+        color,
+        size=size,
+        alpha=alpha,
+    )
     plt.savefig(f"./images/{name}_umap_{alg}.png", dpi=600, pad_inches=0)
     plt.show()
 
@@ -66,7 +83,7 @@ def regplot_lowess_ci(
     *,
     ci_level,
     n_boot,
-    lowess_frac=0.2,
+    lowess_frac=0.1,
     color="C0",
     scatter=True,
     line_kws=None,
@@ -78,7 +95,9 @@ def regplot_lowess_ci(
     x_grid = np.linspace(start=x_.min(), stop=x_.max(), num=1000)
 
     def reg_func(_x, _y):
-        return lowess(exog=_x, endog=_y, xvals=x_grid, is_sorted=False, frac=lowess_frac)
+        return lowess(
+            exog=_x, endog=_y, xvals=x_grid, is_sorted=False, frac=lowess_frac
+        )
 
     beta_boots = sns.algorithms.bootstrap(
         x_,
