@@ -41,13 +41,13 @@ namespaces = false
 [project.optional-dependencies]
 tests = ["pytest"]
 docs = [
-  # "sphinx >= 8.2", assume CI/CD system has latest version
+  "sphinx >= 8.2",
   "nbsphinx >= 0.9",
-  "sphinx_rtd_theme >= 2.0",
+  "sphinx_rtd_theme >= 3.0",
   "matplotlib >= 3.8",
   "numpydoc",
-  "pygments>=2.4.1",
-  "jupyterlab_pygments>=0.1.1",
+  "pygments>=2",
+  "jupyterlab_pygments>=0.3",
   "ipykernel",
 ]
 notebooks = [
